@@ -2,6 +2,7 @@
   "name": "zeus-server/zf3-server",
   "description": "Zeus Server for Zend Framework 3",
   "type": "library",
+  "license": "LGPL-3.0",
   "authors": [
     {
       "name": "Artur Graniszewski",

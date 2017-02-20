@@ -229,7 +229,7 @@ To start the service manually, following command must be executed:
 
 ZEUS for PHP can be installed in two different ways:
 
-- via Composer: ```composer require phpclasses/zeus-for-php```
+- via Composer: ```composer require zeus-server/zf3-server```
 - by unpacking ZEUS source code into your ZF3 `module` directory
 
 ## Initial Configuration
@@ -356,6 +356,11 @@ The above configuration parameters have been described in the __Process Schedule
 - More features introduced to ZEUS Web Server
 
 # Changelog
+
+## Version 1.1.1
+
+- [Composer fix] Specified ZEUS license type in composer.json
+- [Documentation fix] Fixed command syntax that installs ZEUS via Composer
 
 ## Version 1.1.0
 
