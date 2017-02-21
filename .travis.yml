@@ -29,7 +29,6 @@ matrix:
     - php: 7
       env:
         - DEPS=locked
-        - CS_CHECK=true
     - php: 7
       env:
         - DEPS=latest
@@ -60,4 +59,4 @@ install:
 
 script:
   - composer test
-- if [[ $CS_CHECK == 'true' ]]; then composer cs-check ; fi
+  - if [[ $CS_CHECK == 'true' ]]; then composer cs-check ; fi
