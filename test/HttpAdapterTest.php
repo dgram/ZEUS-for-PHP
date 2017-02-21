@@ -143,7 +143,7 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
                 }
             }
 
-            $this->assertEquals("/", $request->getUriString());
+            $this->assertEquals("/", $request->getUri()->getPath());
             foreach ($postData as $key => $value) {
                 $this->assertEquals($value, $request->getPost($key), "Request object should contain valid POST data for key $key");
             }
