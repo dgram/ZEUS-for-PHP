@@ -81,10 +81,10 @@ class Service extends AbstractServerService
         $responseSize = $httpResponse->getMetadata('dataSentInBytes');
 
         $uri = $httpRequest->getUri();
-        $uriString = Uri::encodePath($uri->getPath()) . ($uri->getQuery() ? '?' . Uri::encodeQueryFragment($uri->getQuery()) : '');
+        $uriString = Uri::encodePath($uri->getPath() ? $uri->getPath() : '') . ($uri->getQuery() ? '?' . Uri::encodeQueryFragment($uri->getQuery()) : '');
         $defaultPorts = ['http' => 80, 'https' => 443];
         $port = isset($defaultPorts[$uri->getScheme()]) && $defaultPorts[$uri->getScheme()] == $uri->getPort() ? '' : ':' . $uri->getPort();
-        //$hostString = sprintf("%s%s", $uri->getHost(), $port);
+        $hostString = sprintf("%s%s", $uri->getHost(), $port);
         $referrer = $httpRequest->getHeaders()->has('Referer') ? $httpRequest->getHeaders()->get('Referer')->getFieldValue() : '-';
 
         $this->logger->$priority(sprintf('%s - - "%s %s HTTP/%s" %d %d "%s" "%s"',
