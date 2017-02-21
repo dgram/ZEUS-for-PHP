@@ -359,12 +359,12 @@ The above configuration parameters have been described in the __Process Schedule
 # Changelog
 
 ## Version 1.1.2
-- [Composer fix] Corrected PS4 path in composer.json file
+- [Composer fix] Corrected PSR4 installation path in `composer.json` file
 - [Documentation] Updated road-map
 
 ## Version 1.1.1
 
-- [Composer fix] Specified ZEUS license type in composer.json
+- [Composer fix] Specified ZEUS license type in `composer.json`
 - [Documentation fix] Fixed command syntax that installs ZEUS via Composer
 
 ## Version 1.1.0
