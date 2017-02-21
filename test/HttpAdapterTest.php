@@ -13,6 +13,11 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
 {
     protected function getTmpDir()
     {
+        $tmpDir = __DIR__ . '/tmp/';
+
+        if (!file_exists($tmpDir)) {
+            mkdir($tmpDir);
+        }
         return __DIR__ . '/tmp/';
     }
 
@@ -117,8 +122,6 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
             $testConnection = new TestConnection();
             /** @var Request $request */
             $request = null;
-            /** @var Response $response */
-            $response = null;
 
             $errorOccured = false;
 
@@ -126,9 +129,8 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
                 $errorOccured = $exception;
             };
 
-            $requestHandler = function ($_request, $_response) use (&$request, &$response) {
+            $requestHandler = function ($_request) use (&$request) {
                 $request = $_request;
-                $response = $_response;
             };
             $httpAdapter = $this->getHttpAdapter($requestHandler, $errorHandler);
 
@@ -141,7 +143,6 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
                 }
             }
 
-            $this->assertEquals(200, $response->getStatusCode(), "HTTP/1.1 request should generate 200 OK message");
             $this->assertEquals("/", $request->getUriString());
             foreach ($postData as $key => $value) {
                 $this->assertEquals($value, $request->getPost($key), "Request object should contain valid POST data for key $key");
@@ -158,15 +159,13 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
             $testConnection = new TestConnection();
             /** @var Request $request */
             $request = null;
-            /** @var Response $response */
-            $response = null;
-            $requestHandler = function($_request, $_response) use (&$request, &$response, $testString) {$request = $_request; $response = $_response; echo $testString; };
+            $requestHandler = function($_request) use (&$request, &$response, $testString) {$request = $_request; echo $testString; };
             $httpAdapter = $this->getHttpAdapter($requestHandler, $requestHandler);
             $httpAdapter->onMessage($testConnection, $message);
             $rawResponse = Response::fromString($testConnection->getSentData());
 
             $this->assertEquals(0, strlen($rawResponse->getBody()), "No content should be returned by $method response");
-            $this->assertEquals(strlen($testString), $response->getHeaders()->get('Content-Length')->getFieldValue(), "Incorrect Content-Length header returned by $method response");
+            $this->assertEquals(strlen($testString), $rawResponse->getHeaders()->get('Content-Length')->getFieldValue(), "Incorrect Content-Length header returned by $method response");
 
         }
     }
@@ -181,19 +180,16 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
             $testConnection = new TestConnection();
             /** @var Request $request */
             $request = null;
-            /** @var Response $response */
-            $response = null;
             $fileList = [];
             $tmpDir = $this->getTmpDir();
 
             $errorOccured = false;
 
-            $errorHandler = function($request, $response, $exception) use (& $errorOccured) {
+            $errorHandler = function($request, $exception) use (& $errorOccured) {
                 $errorOccured = $exception;
             };
-            $requestHandler = function (Request $_request, Response $_response) use (&$request, &$response, & $fileList, $tmpDir) {
+            $requestHandler = function (Request $_request) use (&$request, & $fileList, $tmpDir) {
                 $request = $_request;
-                $response = $_response;
 
                 foreach ($request->getFiles() as $formName => $fileArray) {
                     foreach ($fileArray as $file) {
@@ -234,22 +230,19 @@ Hello_World";
             $testConnection = new TestConnection();
             /** @var Request $request */
             $request = null;
-            /** @var Response $response */
-            $response = null;
             $fileList = [];
             $tmpDir = $this->getTmpDir();
 
             $errorOccured = false;
 
-            $errorHandler = function ($request, $response, $exception) use (& $errorOccured) {
+            $errorHandler = function ($request, $exception) use (& $errorOccured) {
                 $errorOccured = $exception;
             };
 
 
-            $requestHandler = function (Request $_request, Response $_response) use (&$request, &$response, & $fileList, $tmpDir) {
+            $requestHandler = function (Request $_request) use (&$request, & $fileList, $tmpDir) {
                 $request = $_request;
-                $response = $_response;
-                return $request;
+                return new Response();
             };
 
             $httpAdapter = $this->getHttpAdapter($requestHandler, $errorHandler);
@@ -265,7 +258,6 @@ Hello_World";
 
             $rawResponse = Response::fromString($testConnection->getSentData());
 
-            $this->assertEquals(200, $rawResponse->getStatusCode(), "HTTP response should return 200 OK status, message received: " . $rawResponse->getContent());
             $this->assertEquals("Hello_World", $request->getContent(), "HTTP response should have returned 'Hello_World', received: " . $request->getContent());
         }
     }
@@ -286,21 +278,18 @@ World
             $testConnection = new TestConnection();
             /** @var Request $request */
             $request = null;
-            /** @var Response $response */
-            $response = null;
             $fileList = [];
             $tmpDir = $this->getTmpDir();
 
             $errorOccured = false;
 
-            $errorHandler = function ($request, $response, $exception) use (& $errorOccured) {
+            $errorHandler = function ($request, $exception) use (& $errorOccured) {
                 $errorOccured = $exception;
             };
 
-            $requestHandler = function (Request $_request, Response $_response) use (&$request, &$response, & $fileList, $tmpDir) {
+            $requestHandler = function (Request $_request) use (&$request, & $fileList, $tmpDir) {
                 $request = $_request;
-                $response = $_response;
-                return $request;
+                return new Response();
             };
 
             $httpAdapter = $this->getHttpAdapter($requestHandler, $errorHandler);
@@ -334,9 +323,7 @@ World
         $testConnection = new TestConnection();
         /** @var Request $request */
         $request = null;
-        /** @var Response $response */
-        $response = null;
-        $requestHandler = function($_request, $_response) use (&$request, &$response) {$request = $_request; $response = $_response; };
+        $requestHandler = function($_request) use (&$request) {$request = $_request; };
         $httpAdapter = $this->getHttpAdapter($requestHandler, $requestHandler);
         $httpAdapter->onMessage($testConnection, $message);
         $rawResponse = Response::fromString($testConnection->getSentData());
@@ -361,7 +348,7 @@ World
      */
     protected function getHttpAdapter($dispatcher, $errorHandler = null)
     {
-        $dispatcherWrapper = function($request) use ($dispatcher) {
+        $dispatcherWrapper = function(& $request) use ($dispatcher) {
             $response = $dispatcher($request);
 
             if (!$response) {
