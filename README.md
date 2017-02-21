@@ -328,6 +328,7 @@ The above configuration parameters have been described in the __Process Schedule
 ### Server Service Manager
 - Additional `EventManager` events covering full application lifecycle
 - More advanced Service reporting and control tools for terminal and remote use
+- Add a plugin that drops user privileges on start of the _Server Service_
 
 ### Process Manager
 - Configurable, more robust scheduling strategies (like terminating processes that handled the largest amount of request, etc)*[]: 
@@ -356,6 +357,10 @@ The above configuration parameters have been described in the __Process Schedule
 - More features introduced to ZEUS Web Server
 
 # Changelog
+
+## Version 1.1.2
+- [Composer fix] Corrected PS4 path in composer.json file
+- [Documentation] Updated road-map
 
 ## Version 1.1.1
 
