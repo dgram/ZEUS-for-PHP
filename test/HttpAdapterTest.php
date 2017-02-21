@@ -122,7 +122,7 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
 
             $errorOccured = false;
 
-            $errorHandler = function($request, $response, $exception) use (& $errorOccured) {
+            $errorHandler = function($request, $exception) use (& $errorOccured) {
                 $errorOccured = $exception;
             };
 
@@ -361,7 +361,17 @@ World
      */
     protected function getHttpAdapter($dispatcher, $errorHandler = null)
     {
-        $adapter = new Message($dispatcher, $errorHandler);
+        $dispatcherWrapper = function($request) use ($dispatcher) {
+            $response = $dispatcher($request);
+
+            if (!$response) {
+                return new Response();
+            }
+
+            return $response;
+        };
+
+        $adapter = new Message($dispatcherWrapper, $errorHandler);
 
         return $adapter;
     }
