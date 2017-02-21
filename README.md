@@ -358,6 +358,12 @@ The above configuration parameters have been described in the __Process Schedule
 
 # Changelog
 
+## Version 1.1.3
+- [Feature] Enabled travis build and improved phpunit configuration
+- [Unit tests fix] Fix for failing phpunit tests due to the recent changes in ZEUS Web Server classes and interfaces
+- [Security fix] Fixed ZEUS Web Server logger throwing fatal exception and leaving open connection when HTTP request was corrupted
+- [Unclassified] Various `composer.json` fixes and tweaks
+
 ## Version 1.1.2
 - [Composer fix] Corrected PSR4 installation path in `composer.json` file
 - [Documentation] Updated road-map

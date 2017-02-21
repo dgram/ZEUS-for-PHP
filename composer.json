@@ -9,6 +9,12 @@
       "email": "artur.graniszewski@gmail.com"
     }
   ],
+  "keywords": [
+    "zf3",
+    "zend",
+    "multitasking",
+    "httpd"
+  ],
   "require": {
     "php": "^5.6 || ^7.0",
     "ext-posix": "*",
@@ -19,10 +25,26 @@
     "zendframework/zend-log": "^2.9"
   },
   "require-dev": {
+    "phpunit/phpunit": "^4.8",
+    "squizlabs/php_codesniffer": "^2.7"
   },
   "autoload": {
     "psr-4": {
       "Zeus\\": "src/Zeus/"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ZeusTest\\": "test/"
+    }
+  },
+  "scripts": {
+    "check": [
+      "@cs-check",
+      "@test"
+    ],
+    "cs-check": "phpcs",
+    "cs-fix": "phpcbf",
+    "test": "phpunit"
   }
 }
