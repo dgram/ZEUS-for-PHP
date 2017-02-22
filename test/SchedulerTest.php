@@ -9,6 +9,8 @@ use Zend\Log\Writer\Noop;
 use Zend\Mvc\Application;
 use Zend\ServiceManager\ServiceManager;
 use Zend\Stdlib\ArrayUtils;
+use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
+use Zeus\Kernel\IpcServer\Factory\IpcAdapterAbstractFactory;
 use Zeus\Kernel\ProcessManager\Factory\ProcessFactory;
 use Zeus\Kernel\ProcessManager\Factory\SchedulerFactory;
 use Zeus\Kernel\ProcessManager\Process;
@@ -49,6 +51,7 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
         $sm = new ServiceManager();
         $sm->setFactory(Scheduler::class, SchedulerFactory::class);
         $sm->setFactory(Process::class, ProcessFactory::class);
+        $sm->setFactory(IpcAdapterInterface::class, IpcAdapterAbstractFactory::class);
         $sm->setFactory(DummyServiceFactory::class, DummyServiceFactory::class);
         $config = require "../config/module.config.php";
 
@@ -72,8 +75,10 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
         );
 
         $sm->setService('configuration', $config);
+
+        $ipcAdapter = $sm->build(DummyIpcAdapter::class, ['service_name' => 'test-service']);
         $scheduler = $sm->build(Scheduler::class, [
-            'ipc_adapter' =>  new DummyIpcAdapter('test', []),
+            'ipc_adapter' => $ipcAdapter,
             'service_name' => 'test-service',
             'scheduler_name' => 'test-scheduler',
             'service_logger_adapter' => $logger,
