@@ -86,7 +86,9 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
     public function testApplicationInit()
     {
         $scheduler = $this->getScheduler();
+        $this->assertInstanceOf(Scheduler::class, $scheduler);
         $scheduler->setContinueMainLoop(false);
         $scheduler->startScheduler(new Event());
+        $this->assertEquals(getmypid(), $scheduler->getId());
     }
 }
