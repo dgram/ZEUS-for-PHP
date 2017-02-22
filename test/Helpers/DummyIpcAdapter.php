@@ -2,7 +2,6 @@
 
 namespace ZeusTest\Helpers;
 
-
 use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
 
 class DummyIpcAdapter implements IpcAdapterInterface
@@ -76,6 +75,10 @@ class DummyIpcAdapter implements IpcAdapterInterface
 
         $result = $this->messages[$channelNumber];
         $this->messages[$channelNumber] = [];
+
+        if (!is_array($result)) {
+            $result = [];
+        }
 
         return $result;
     }

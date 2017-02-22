@@ -4,6 +4,7 @@ namespace ZeusTest;
 
 use PHPUnit_Framework_TestCase;
 use Zend\EventManager\Event;
+use Zend\EventManager\EventInterface;
 use Zend\Log\Logger;
 use Zend\Log\Writer\Noop;
 use Zend\Mvc\Application;
@@ -15,6 +16,7 @@ use Zeus\Kernel\ProcessManager\Factory\ProcessFactory;
 use Zeus\Kernel\ProcessManager\Factory\SchedulerFactory;
 use Zeus\Kernel\ProcessManager\Process;
 use Zeus\Kernel\ProcessManager\Scheduler;
+use Zeus\Kernel\ProcessManager\Scheduler\EventsInterface;
 use ZeusTest\Helpers\DummyIpcAdapter;
 use ZeusTest\Helpers\DummyServiceFactory;
 
@@ -49,6 +51,7 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
         $logger->addWriter(new Noop());
 
         $sm = new ServiceManager();
+        $sm->addAbstractFactory(IpcAdapterAbstractFactory::class);
         $sm->setFactory(Scheduler::class, SchedulerFactory::class);
         $sm->setFactory(Process::class, ProcessFactory::class);
         $sm->setFactory(IpcAdapterInterface::class, IpcAdapterAbstractFactory::class);
@@ -95,5 +98,21 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
         $scheduler->setContinueMainLoop(false);
         $scheduler->startScheduler(new Event());
         $this->assertEquals(getmypid(), $scheduler->getId());
+    }
+
+    public function testMainLoopIteration()
+    {
+        $scheduler = $this->getScheduler();
+        $this->assertInstanceOf(Scheduler::class, $scheduler);
+
+        $events = $scheduler->getEventManager();
+        $counter = 0;
+        $events->attach(EventsInterface::ON_SCHEDULER_LOOP, function(EventInterface $e) use (&$counter) {
+            $e->getTarget()->setContinueMainLoop(false);
+            $counter++;
+        });
+
+        $scheduler->startScheduler(new Event());
+        $this->assertEquals(1, $counter, 'Loop should have been executed only once');
     }
 }
