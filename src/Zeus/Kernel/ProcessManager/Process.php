@@ -192,11 +192,9 @@ final class Process
             $payload['exception'] = $exception;
         }
 
-        //$this->events->trigger(EventsInterface::ON_PROCESS_EXIT, $this, $payload);
-
         $exitCode = $exception ? $exception->getCode() : 0;
 
-        exit($exitCode);
+        $this->events->trigger(EventsInterface::ON_PROCESS_EXIT, $this, $payload);
     }
 
     /**
