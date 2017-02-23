@@ -1,4 +1,4 @@
-
+[![Build Status](https://travis-ci.org/artur-graniszewski/ZEUS-for-PHP.svg?branch=master)](https://travis-ci.org/artur-graniszewski/ZEUS-for-PHP) [![Coverage Status](https://coveralls.io/repos/github/artur-graniszewski/ZEUS-for-PHP/badge.svg?branch=master)](https://coveralls.io/github/artur-graniszewski/ZEUS-for-PHP?branch=master)
 
 # Introduction
 
@@ -357,6 +357,12 @@ The above configuration parameters have been described in the __Process Schedule
 - More features introduced to ZEUS Web Server
 
 # Changelog
+
+## Version 1.1.5
+- [Feature] New event `Zeus\Kernel\ProcessManager\EventsInterface::ON_PROCESS_EXIT` introduced
+- [Feature] Improved console help
+- [Unclassified] Dead code removal, README tweaks
+- [Tests improvements] More Scheduler tests added
 
 ## Version 1.1.4
 - [Unit tests fix] Fix for division by zero error in PHP 5.6 unit tests in `ProcessTitle` class

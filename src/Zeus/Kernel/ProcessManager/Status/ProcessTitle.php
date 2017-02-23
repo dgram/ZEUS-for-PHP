@@ -4,7 +4,7 @@ namespace Zeus\Kernel\ProcessManager\Status;
 
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
-use Zeus\Kernel\ProcessManager\Scheduler\EventsInterface;
+use Zeus\Kernel\ProcessManager\EventsInterface;
 
 class ProcessTitle
 {

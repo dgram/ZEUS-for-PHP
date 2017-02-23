@@ -1,6 +1,6 @@
 <?php
 
-namespace Zeus\Kernel\ProcessManager\Scheduler;
+namespace Zeus\Kernel\ProcessManager;
 
 interface EventsInterface
 {
@@ -12,6 +12,7 @@ interface EventsInterface
     const ON_PROCESS_INIT = 'onProcessStarted';
     const ON_PROCESS_TERMINATED = 'onProcessTerminated';
     const ON_PROCESS_TERMINATE = 'onProcessTerminate';
+    const ON_PROCESS_EXIT = 'onProcessExit';
 
     const ON_PROCESS_LOOP = 'onProcessLoop';
 

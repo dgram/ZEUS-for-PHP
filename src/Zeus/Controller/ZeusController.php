@@ -61,14 +61,24 @@ class ZeusController extends AbstractActionController
         $action = $params->get(1);
         $serviceName = $params->get(2);
 
-        switch ($action) {
-            case 'start':
-                $this->startApplication($serviceName);
-                break;
+        try {
+            switch ($action) {
+                case 'start':
+                    $this->startApplication($serviceName);
+                    break;
 
-            case 'list':
-                $this->listServices($serviceName);
-                break;
+                case 'list':
+                    $this->listServices($serviceName);
+                    break;
+            }
+        } catch (\Exception $exception) {
+            $this->logger->err(sprintf("Exception (%d): %s in %s on line %d",
+                $exception->getCode(),
+                addcslashes($exception->getMessage(), "\t\n\r\0\x0B"),
+                $exception->getFile(),
+                $exception->getLine()
+            ));
+            $this->logger->debug(sprintf("Stack Trace:\n%s", $exception->getTraceAsString()));
         }
     }
 
@@ -89,13 +99,13 @@ class ZeusController extends AbstractActionController
             $config = array_slice(
                 explode("\n", print_r($serviceConfig, true)), 1, -1);
 
-            $output .= PHP_EOL . 'Service configuration for ' . $serviceName . ':' . PHP_EOL . implode(PHP_EOL, $config) . PHP_EOL;
+            $output .= PHP_EOL . 'Service configuration for "' . $serviceName . '"":' . PHP_EOL . implode(PHP_EOL, $config) . PHP_EOL;
         }
 
         if ($output) {
             $this->logger->info('Configuration details:' . $output);
         } else {
-            $this->logger->warn('No services found');
+            $this->logger->warn('No Server Service found');
         }
     }
 
@@ -123,9 +133,13 @@ class ZeusController extends AbstractActionController
         $managerTime = $now - $startTime;
 
         $this->logger->info(sprintf("Started %d services in %.2f seconds (PHP running for %.2f)", count($services), $managerTime, $phpTime));
-        while(true) {
-            pcntl_signal_dispatch();
-            sleep(1);
+        if (count($services) > 0) {
+            while (true) {
+                pcntl_signal_dispatch();
+                sleep(1);
+            }
+        } else {
+            $this->logger->warn('No Server Service found');
         }
     }
 

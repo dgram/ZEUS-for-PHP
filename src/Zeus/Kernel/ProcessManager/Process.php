@@ -6,7 +6,7 @@ use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zend\Log\LoggerInterface;
 use Zeus\Kernel\IpcServer\Message;
-use Zeus\Kernel\ProcessManager\Scheduler\EventsInterface;
+use Zeus\Kernel\ProcessManager\EventsInterface;
 use Zeus\Kernel\ProcessManager\Status\ProcessState;
 
 final class Process
@@ -192,11 +192,7 @@ final class Process
             $payload['exception'] = $exception;
         }
 
-        //$this->events->trigger(EventsInterface::ON_PROCESS_EXIT, $this, $payload);
-
-        $exitCode = $exception ? $exception->getCode() : 0;
-
-        exit($exitCode);
+        $this->events->trigger(EventsInterface::ON_PROCESS_EXIT, $this, $payload);
     }
 
     /**

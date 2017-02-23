@@ -8,7 +8,7 @@ use Zend\Log\LoggerInterface;
 use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
 use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
 use Zeus\Kernel\ProcessManager\Helper\Logger;
-use Zeus\Kernel\ProcessManager\Scheduler\EventsInterface;
+use Zeus\Kernel\ProcessManager\EventsInterface;
 use Zeus\Kernel\ProcessManager\Scheduler\ProcessCollection;
 use Zeus\Kernel\ProcessManager\Status\ProcessState;
 use Zeus\Kernel\IpcServer\Message;
@@ -158,6 +158,7 @@ final class Scheduler
         $events->attach(EventsInterface::ON_PROCESS_INIT, function(EventInterface $e) { $this->onProcessInit($e);});
         $events->attach(EventsInterface::ON_PROCESS_TERMINATED, function(EventInterface $e) { $this->onProcessExit($e);}, -10000);
         $events->attach(EventsInterface::ON_PROCESS_TERMINATE, function(EventInterface $e) { $this->onProcessExit($e);}, -10000);
+        $events->attach(EventsInterface::ON_PROCESS_EXIT, function(EventInterface $e) { exit();}, -10000);
         $events->attach(EventsInterface::ON_PROCESS_MESSAGE, function(EventInterface $e) { $this->onProcessMessage($e);});
         $events->attach(EventsInterface::ON_SERVER_STOP, function(EventInterface $e) { $this->onShutdown($e);});
 
@@ -431,7 +432,7 @@ final class Scheduler
         $this->processTemplate->setConfig($this->getConfig());
         $this->processTemplate->mainLoop();
 
-        exit(0);
+        //exit(0);
     }
 
     /**

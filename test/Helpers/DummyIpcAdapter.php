@@ -6,7 +6,7 @@ use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
 
 class DummyIpcAdapter implements IpcAdapterInterface
 {
-    protected $messages;
+    protected $messages = [0 => [], 1 => []];
     protected $channelNumber = 0;
 
 
