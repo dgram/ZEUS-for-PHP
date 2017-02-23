@@ -24,7 +24,7 @@ final class Manager
     public function getService($serviceName)
     {
         if (!isset($this->services[$serviceName]['service'])) {
-            throw new \RuntimeException("Service $serviceName not found");
+            throw new \RuntimeException("Service \"$serviceName\" not found");
         }
 
         return $this->services[$serviceName]['service'];
