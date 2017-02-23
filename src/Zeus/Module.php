@@ -22,7 +22,7 @@ class Module implements
     ConsoleUsageProviderInterface,
     ConsoleBannerProviderInterface
 {
-    const MODULE_VERSION = "1.1.0";
+    const MODULE_VERSION = "1.1.5";
 
     protected static $overrideConfig = '';
 
@@ -83,9 +83,13 @@ class Module implements
     {
         $usage = [];
 
-        $usage['zeus start'] = 'Starts Zeus server with all its services';
+        $usage['zeus start'] = 'Starts all ZEUS Server Services';
 
-        $usage['zeus start [<service-name>]'] = 'Starts Zeus server with selected service';
+        $usage['zeus start [<service-name>]'] = 'Starts selected Server Service';
+
+        $usage['zeus list'] = 'Lists all Server Services and its configurations';
+
+        $usage['zeus list [<service-name>]'] = 'Shows configuration of the selected Server Service';
 
         return $usage;
     }
