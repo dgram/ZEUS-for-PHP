@@ -6,7 +6,7 @@ use React\EventLoop\LoopInterface;
 use React\Socket\Server as SocketServer;
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
-use Zeus\Kernel\ProcessManager\Scheduler\EventsInterface;
+use Zeus\Kernel\ProcessManager\EventsInterface;
 use Zeus\Kernel\ProcessManager\Process;
 
 class ReactEventSubscriber

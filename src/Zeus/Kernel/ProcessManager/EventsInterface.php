@@ -1,6 +1,6 @@
 <?php
 
-namespace Zeus\Kernel\ProcessManager\Scheduler;
+namespace Zeus\Kernel\ProcessManager;
 
 interface EventsInterface
 {

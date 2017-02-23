@@ -5,7 +5,7 @@ namespace Zeus\Kernel\ProcessManager\MultiProcessingModule;
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
-use Zeus\Kernel\ProcessManager\Scheduler\EventsInterface;
+use Zeus\Kernel\ProcessManager\EventsInterface;
 
 final class PosixProcess implements MultiProcessingModuleInterface
 {
