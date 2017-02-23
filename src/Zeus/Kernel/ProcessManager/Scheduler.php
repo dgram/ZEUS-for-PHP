@@ -8,7 +8,7 @@ use Zend\Log\LoggerInterface;
 use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
 use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
 use Zeus\Kernel\ProcessManager\Helper\Logger;
-use Zeus\Kernel\ProcessManager\Scheduler\EventsInterface;
+use Zeus\Kernel\ProcessManager\EventsInterface;
 use Zeus\Kernel\ProcessManager\Scheduler\ProcessCollection;
 use Zeus\Kernel\ProcessManager\Status\ProcessState;
 use Zeus\Kernel\IpcServer\Message;
