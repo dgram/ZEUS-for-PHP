@@ -358,6 +358,10 @@ The above configuration parameters have been described in the __Process Schedule
 
 # Changelog
 
+## Version 1.1.6
+- [Fix] Various fixes for IpcAdapters: `MsgAdapter`, `ApcAdapter`, `FifoAdapter`
+- [Fix] Fixed permissions of some PHP files
+
 ## Version 1.1.5
 - [Feature] New event `Zeus\Kernel\ProcessManager\EventsInterface::ON_PROCESS_EXIT` introduced
 - [Feature] Improved console help
