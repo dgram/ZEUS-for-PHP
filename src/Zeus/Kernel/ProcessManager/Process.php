@@ -105,27 +105,6 @@ final class Process
     }
 
     /**
-     * @param EventInterface $event
-     * @return $this
-     */
-    protected function sendEvent(EventInterface $event)
-    {
-        if ($event->getName() === EventsInterface::ON_PROCESS_MESSAGE) {
-            return $this;
-        }
-
-        $payload = [
-            'isEvent' => true,
-            'type' => $event->getName(),
-            'extra' => (array) $event->getParams()
-        ];
-
-        $this->events->trigger(EventsInterface::ON_PROCESS_MESSAGE, $this, $payload);
-
-        return $this;
-    }
-
-    /**
      * @return $this
      */
     public function setBusy()

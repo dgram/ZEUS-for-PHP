@@ -6,13 +6,16 @@ namespace Zeus\Kernel\IpcServer\Adapter;
  * Handles Inter Process Communication using APCu functionality.
  * @internal
  */
-class ApcAdapter implements IpcAdapterInterface
+final class ApcAdapter implements IpcAdapterInterface
 {
     /** @var string */
     protected $namespace;
 
     /** @var mixed[] */
     protected $config;
+
+    /** @var int */
+    protected $channelNumber = 0;
 
     /**
      * Creates IPC object.
@@ -24,8 +27,13 @@ class ApcAdapter implements IpcAdapterInterface
     {
         $this->namespace = $namespace;
         $this->config = $config;
-        apcu_store($this->namespace . '_readindex', 0, 0);
-        apcu_store($this->namespace . '_writeindex', 0, 0);
+
+        if (static::isSupported()) {
+            apcu_store($this->namespace . '_readindex_0', 0, 0);
+            apcu_store($this->namespace . '_writeindex_0', 0, 0);
+            apcu_store($this->namespace . '_readindex_1', 0, 0);
+            apcu_store($this->namespace . '_writeindex_1', 0, 0);
+        }
     }
 
     /**
@@ -36,7 +44,7 @@ class ApcAdapter implements IpcAdapterInterface
      */
     public function send($message)
     {
-        $index = apcu_fetch($this->namespace . '_writeindex');
+        $index = apcu_fetch($this->namespace . '_writeindex_' . $this->channelNumber);
         apcu_store($this->namespace . '_' . $index, $message, 0);
 
         if (65535 < apcu_inc($this->namespace . '_writeindex')) {
@@ -53,12 +61,20 @@ class ApcAdapter implements IpcAdapterInterface
      */
     public function receive()
     {
-        $readIndex = apcu_fetch($this->namespace . '_readindex');
+        $channelNumber = $this->channelNumber;
+
+        if ($channelNumber == 0) {
+            $channelNumber = 1;
+        } else {
+            $channelNumber = 0;
+        }
+
+        $readIndex = apcu_fetch($this->namespace . '_readindex_' . $channelNumber);
         $result = apcu_fetch($this->namespace . '_' . $readIndex);
         apcu_delete($this->namespace . '_' . $readIndex);
 
-        if (65535 < apcu_inc($this->namespace . '_readindex')) {
-            apcu_store($this->namespace . '_readindex', 0, 0);
+        if (65535 < apcu_inc($this->namespace . '_readindex_' . $channelNumber)) {
+            apcu_store($this->namespace . '_readindex_' . $channelNumber, 0, 0);
         }
 
         return $result;
@@ -95,7 +111,15 @@ class ApcAdapter implements IpcAdapterInterface
      */
     public static function isSupported()
     {
-        return (extension_loaded('apcu') && false !== @apcu_cache_info());
+        return (
+            extension_loaded('apcu')
+            &&
+            false !== @apcu_cache_info()
+            &&
+            function_exists('apcu_store')
+            &&
+            function_exists('apcu_fetch')
+        );
     }
 
     /**
@@ -104,6 +128,8 @@ class ApcAdapter implements IpcAdapterInterface
      */
     public function useChannelNumber($channelNumber)
     {
+        $this->channelNumber = $channelNumber;
+
         return $this;
     }
 }

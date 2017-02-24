@@ -7,23 +7,16 @@ use Zend\EventManager\Event;
 use Zend\EventManager\EventInterface;
 use Zend\Log\Logger;
 use Zend\Log\Writer\Mock;
-use Zend\Log\Writer\Noop;
-use Zend\Mvc\Application;
 use Zend\ServiceManager\ServiceManager;
-use Zend\Stdlib\ArrayUtils;
-use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
-use Zeus\Kernel\IpcServer\Factory\IpcAdapterAbstractFactory;
-use Zeus\Kernel\ProcessManager\Factory\ProcessFactory;
-use Zeus\Kernel\ProcessManager\Factory\SchedulerFactory;
-use Zeus\Kernel\ProcessManager\Process;
+use Zend\Stdlib\SplPriorityQueue;
+use Zend\Stdlib\SplQueue;
 use Zeus\Kernel\ProcessManager\Scheduler;
 use Zeus\Kernel\ProcessManager\EventsInterface;
-use Zeus\ServerService\Shared\Logger\IpcLogWriter;
-use ZeusTest\Helpers\DummyIpcAdapter;
-use ZeusTest\Helpers\DummyServiceFactory;
+use ZeusTest\Helpers\ZeusFactories;
 
 class SchedulerTest extends PHPUnit_Framework_TestCase
 {
+    use ZeusFactories;
 
     /**
      * @var ServiceManager
@@ -38,70 +31,6 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
     public function tearDown()
     {
         parent::tearDown();
-    }
-
-    /**
-     * @param int $mainLoopIterantions
-     * @return Scheduler
-     */
-    public function getScheduler($mainLoopIterantions = 0)
-    {
-        $sm = new ServiceManager();
-        $sm->addAbstractFactory(IpcAdapterAbstractFactory::class);
-        $sm->setFactory(Scheduler::class, SchedulerFactory::class);
-        $sm->setFactory(Process::class, ProcessFactory::class);
-        $sm->setFactory(IpcAdapterInterface::class, IpcAdapterAbstractFactory::class);
-        $sm->setFactory(DummyServiceFactory::class, DummyServiceFactory::class);
-        $config = require "../config/module.config.php";
-
-        $config = ArrayUtils::merge($config,
-            [
-                'zeus_process_manager' => [
-                    'schedulers' => [
-                        'test_scheduler_1' => [
-                            'scheduler_name' => 'test-scheduler',
-                            'multiprocessing_module' => DummyServiceFactory::class,
-                            'max_processes' => 32,
-                            'max_process_tasks' => 100,
-                            'min_spare_processes' => 3,
-                            'max_spare_processes' => 5,
-                            'start_processes' => 8,
-                            'enable_process_cache' => true
-                        ]
-                    ]
-                ]
-            ]
-        );
-
-        $sm->setService('configuration', $config);
-
-        $ipcAdapter = $sm->build(DummyIpcAdapter::class, ['service_name' => 'test-service']);
-        $logger = new Logger();
-        $ipcWriter = new IpcLogWriter();
-        $ipcWriter->setIpcAdapter($ipcAdapter);
-        $logger->addWriter($ipcWriter);
-
-        $scheduler = $sm->build(Scheduler::class, [
-            'ipc_adapter' => $ipcAdapter,
-            'service_name' => 'test-service',
-            'scheduler_name' => 'test-scheduler',
-            'service_logger_adapter' => $logger,
-            'main_logger_adapter' => $logger,
-        ]);
-
-        if ($mainLoopIterantions > 0) {
-            $events = $scheduler->getEventManager();
-            $events->attach(EventsInterface::ON_SCHEDULER_LOOP, function (EventInterface $e) use (&$mainLoopIterantions) {
-
-                $mainLoopIterantions--;
-
-                if ($mainLoopIterantions === 0) {
-                    $e->getTarget()->setContinueMainLoop(false);
-                }
-            });
-        }
-
-        return $scheduler;
     }
 
     public function testApplicationInit()
@@ -202,5 +131,59 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals(8, $amountOfScheduledProcesses, "Scheduler should try to create 8 processes on its startup");
         $this->assertEquals($processesCreated, $processesInitialized, "Scheduler should have initialized all requested processes");
+    }
+
+    public function testProcessErrorHandling()
+    {
+        $scheduler = $this->getScheduler(1);
+
+        $amountOfScheduledProcesses = 0;
+        $processesCreated = [];
+        $processesInitialized = [];
+
+        $em = $scheduler->getEventManager();
+        $em->attach(EventsInterface::ON_PROCESS_EXIT, function(EventInterface $e) {$e->stopPropagation(true);});
+        $em->attach(EventsInterface::ON_PROCESS_CREATE,
+            function(EventInterface $e) use (&$amountOfScheduledProcesses, &$processesCreated, $em) {
+                $amountOfScheduledProcesses++;
+
+                $uid = 100000000 + $amountOfScheduledProcesses;
+                $em->trigger(EventsInterface::ON_PROCESS_INIT, null, ['uid' => $uid]);
+                $processesCreated[] = $uid;
+            }
+        );
+        $em->attach(EventsInterface::ON_PROCESS_LOOP,
+            function(EventInterface $e) use (&$processesInitialized) {
+                $id = $e->getTarget()->getId();
+                if (in_array($id, $processesInitialized)) {
+                    $e->getTarget()->setBusy();
+                    $e->getTarget()->getStatus()->incrementNumberOfFinishedTasks(100);
+                    $e->getTarget()->setIdle();
+                    return;
+                }
+                $processesInitialized[] = $id;
+
+                $e->getTarget()->setBusy();
+                throw new \RuntimeException("Exception thrown by $id!", 10000);
+            }
+        );
+
+        $logger = $scheduler->getLogger();
+        $mockWriter = new Mock();
+        $scheduler->setLogger($logger);
+        $scheduler->getLogger()->addWriter($mockWriter);
+        $scheduler->startScheduler(new Event());
+
+        $this->assertEquals(8, $amountOfScheduledProcesses, "Scheduler should try to create 8 processes on its startup");
+        $this->assertEquals($processesCreated, $processesInitialized, "Scheduler should have initialized all requested processes");
+
+        $foundExceptions = [];
+        foreach ($mockWriter->events as $event) {
+            if (preg_match('~^Exception \(10000\): Exception thrown by ([0-9]+)~', $event['message'], $matches)) {
+                $foundExceptions[] = $matches[1];
+            }
+        }
+
+        $this->assertEquals(8, count($foundExceptions), "Logger should have reported 8 errors");
     }
 }

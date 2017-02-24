@@ -7,7 +7,7 @@ namespace Zeus\Kernel\IpcServer\Adapter;
  *
  * @internal
  */
-class SocketAdapter implements IpcAdapterInterface
+final class SocketAdapter implements IpcAdapterInterface
 {
     /** @var resource[] sockets */
     protected $ipc = [];
@@ -134,7 +134,7 @@ class SocketAdapter implements IpcAdapterInterface
      */
     public function disconnect($channelNumber = -1)
     {
-        if ($channelNumber >= 0 && $this->ipc[$channelNumber]) {
+        if ($channelNumber >= 0 && isset($this->ipc[$channelNumber])) {
             $socket = $this->ipc[$channelNumber];
             socket_shutdown($socket, 2);
             socket_close($socket);

@@ -9,7 +9,7 @@ use Zend\ServiceManager\Exception\ServiceNotFoundException;
 use Zend\ServiceManager\Factory\AbstractFactoryInterface;
 use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
 
-class IpcAdapterAbstractFactory implements AbstractFactoryInterface
+final class IpcAdapterAbstractFactory implements AbstractFactoryInterface
 {
 
     /**

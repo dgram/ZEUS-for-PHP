@@ -4,8 +4,10 @@ namespace Zeus\Kernel\IpcServer\Adapter;
 
 /**
  * Handles Inter Process Communication using SystemV functionality.
+ *
+ * @internal
  */
-class MsgAdapter implements IpcAdapterInterface
+final class MsgAdapter implements IpcAdapterInterface
 {
     const MAX_MESSAGE_SIZE = 16384;
 
@@ -22,6 +24,9 @@ class MsgAdapter implements IpcAdapterInterface
     /** @var mixed[] */
     protected $config;
 
+    /** @var int */
+    protected $channelNumber = 0;
+
     /**
      * Creates IPC object.
      *
@@ -33,14 +38,15 @@ class MsgAdapter implements IpcAdapterInterface
         $this->namespace = $namespace;
         $this->config = $config;
 
-        $id = $this->getQueueId($namespace);
+        $id1 = $this->getQueueId($namespace);
+        $this->ipc[0] = msg_get_queue($id1, 0600);
+        $id2 = $this->getQueueId($namespace);
+        $this->ipc[1] = msg_get_queue($id2, 0600);
 
-        if (!$id) {
+        if (!$id1 || !$id2) {
             // something went wrong
             throw new \RuntimeException("Failed to find a queue for IPC");
         }
-
-        $this->ipc = msg_get_queue($id, 0600);
     }
 
     /**
@@ -75,7 +81,19 @@ class MsgAdapter implements IpcAdapterInterface
      */
     public function send($message)
     {
-        if (!@msg_send($this->getQueue(), 1, $message, true, true, $errno)) {
+        $channelNumber = $this->channelNumber;
+
+        if ($channelNumber == 0) {
+            $channelNumber = 1;
+        } else {
+            $channelNumber = 0;
+        }
+
+        if (strlen($message) > static::MAX_MESSAGE_SIZE) {
+            throw new \RuntimeException("Message lengths exceeds max packet size of " . static::MAX_MESSAGE_SIZE);
+        }
+
+        if (!@msg_send($this->ipc[$channelNumber], 1, $message, true, true, $errno)) {
             // @todo: handle this case
         }
 
@@ -89,8 +107,11 @@ class MsgAdapter implements IpcAdapterInterface
      */
     public function receive()
     {
+        $channelNumber = $this->channelNumber;
+
+
         $messageType = 1;
-        msg_receive($this->getQueue(), $messageType, $messageType, self::MAX_MESSAGE_SIZE, $message, true, MSG_IPC_NOWAIT);
+        msg_receive($this->ipc[$channelNumber], $messageType, $messageType, self::MAX_MESSAGE_SIZE, $message, true, MSG_IPC_NOWAIT);
 
         return $message;
     }
@@ -102,10 +123,12 @@ class MsgAdapter implements IpcAdapterInterface
      */
     public function receiveAll()
     {
+        $channelNumber = $this->channelNumber;
+
         $messages = [];
 
         // early elimination
-        $stats = msg_stat_queue($this->getQueue());
+        $stats = msg_stat_queue($this->ipc[$channelNumber]);
         if (!$stats['msg_qnum']) {
 
             // nothing to read
@@ -128,11 +151,19 @@ class MsgAdapter implements IpcAdapterInterface
     /**
      * Destroys this IPC object.
      *
+     * @param int $channelNumber
      * @return $this
      */
     public function disconnect($channelNumber = -1)
     {
-        //msg_remove_queue($this->getQueue());
+        if ($channelNumber !== -1) {
+            return $this;
+        }
+
+        foreach ($this->ipc as $channelNumber => $stream) {
+            msg_remove_queue($this->ipc[$channelNumber]);
+            unset($this->ipc[$channelNumber]);
+        }
 
         return $this;
     }
@@ -151,6 +182,8 @@ class MsgAdapter implements IpcAdapterInterface
      */
     public function useChannelNumber($channelNumber)
     {
+        $this->channelNumber = $channelNumber;
+
         return $this;
     }
 }
