@@ -8,6 +8,8 @@ use Zend\EventManager\EventInterface;
 use Zend\Log\Logger;
 use Zend\Log\Writer\Mock;
 use Zend\ServiceManager\ServiceManager;
+use Zend\Stdlib\SplPriorityQueue;
+use Zend\Stdlib\SplQueue;
 use Zeus\Kernel\ProcessManager\Scheduler;
 use Zeus\Kernel\ProcessManager\EventsInterface;
 use ZeusTest\Helpers\ZeusFactories;
@@ -129,5 +131,59 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals(8, $amountOfScheduledProcesses, "Scheduler should try to create 8 processes on its startup");
         $this->assertEquals($processesCreated, $processesInitialized, "Scheduler should have initialized all requested processes");
+    }
+
+    public function testProcessErrorHandling()
+    {
+        $scheduler = $this->getScheduler(1);
+
+        $amountOfScheduledProcesses = 0;
+        $processesCreated = [];
+        $processesInitialized = [];
+
+        $em = $scheduler->getEventManager();
+        $em->attach(EventsInterface::ON_PROCESS_EXIT, function(EventInterface $e) {$e->stopPropagation(true);});
+        $em->attach(EventsInterface::ON_PROCESS_CREATE,
+            function(EventInterface $e) use (&$amountOfScheduledProcesses, &$processesCreated, $em) {
+                $amountOfScheduledProcesses++;
+
+                $uid = 100000000 + $amountOfScheduledProcesses;
+                $em->trigger(EventsInterface::ON_PROCESS_INIT, null, ['uid' => $uid]);
+                $processesCreated[] = $uid;
+            }
+        );
+        $em->attach(EventsInterface::ON_PROCESS_LOOP,
+            function(EventInterface $e) use (&$processesInitialized) {
+                $id = $e->getTarget()->getId();
+                if (in_array($id, $processesInitialized)) {
+                    $e->getTarget()->setBusy();
+                    $e->getTarget()->getStatus()->incrementNumberOfFinishedTasks(100);
+                    $e->getTarget()->setIdle();
+                    return;
+                }
+                $processesInitialized[] = $id;
+
+                $e->getTarget()->setBusy();
+                throw new \RuntimeException("Exception thrown by $id!", 10000);
+            }
+        );
+
+        $logger = $scheduler->getLogger();
+        $mockWriter = new Mock();
+        $scheduler->setLogger($logger);
+        $scheduler->getLogger()->addWriter($mockWriter);
+        $scheduler->startScheduler(new Event());
+
+        $this->assertEquals(8, $amountOfScheduledProcesses, "Scheduler should try to create 8 processes on its startup");
+        $this->assertEquals($processesCreated, $processesInitialized, "Scheduler should have initialized all requested processes");
+
+        $foundExceptions = [];
+        foreach ($mockWriter->events as $event) {
+            if (preg_match('~^Exception \(10000\): Exception thrown by ([0-9]+)~', $event['message'], $matches)) {
+                $foundExceptions[] = $matches[1];
+            }
+        }
+
+        $this->assertEquals(8, count($foundExceptions), "Logger should have reported 8 errors");
     }
 }
