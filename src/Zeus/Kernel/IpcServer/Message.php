@@ -6,8 +6,10 @@ use Zend\Log\Logger;
 
 /**
  * Server message.
+ *
+ * @internal
  */
-class Message
+final class Message
 {
     /**
      * This is a debug message.

@@ -10,7 +10,7 @@ use Zend\ServiceManager\Factory\FactoryInterface;
 use Zeus\Kernel\IpcServer\Adapter\FifoAdapter;
 use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
 
-class IpcServerFactory implements FactoryInterface
+final class IpcServerFactory implements FactoryInterface
 {
     /** @var IpcAdapterInterface[] */
     protected static $channels = [];
@@ -30,6 +30,7 @@ class IpcServerFactory implements FactoryInterface
     public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
         $channelName = $options['service_name'];
+
         $ipcAdapter = isset($options['ipc_adapter']) ? $options['ipc_adapter'] : FifoAdapter::class;
 
         if (!isset(self::$channels[$channelName])) {

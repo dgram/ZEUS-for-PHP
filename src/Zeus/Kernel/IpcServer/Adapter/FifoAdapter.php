@@ -7,7 +7,7 @@ namespace Zeus\Kernel\IpcServer\Adapter;
  * @package Zeus\Kernel\IpcServer\Adapter
  * @internal
  */
-class FifoAdapter implements IpcAdapterInterface
+final class FifoAdapter implements IpcAdapterInterface
 {
     /** @var resource[] sockets */
     protected $ipc = [];
@@ -55,6 +55,8 @@ class FifoAdapter implements IpcAdapterInterface
     public function useChannelNumber($channelNumber)
     {
         $this->channelNumber = $channelNumber;
+
+        return $this;
     }
 
     /**
@@ -68,9 +70,7 @@ class FifoAdapter implements IpcAdapterInterface
         $channelNumber = $this->channelNumber;
         $message = base64_encode(serialize($message));
 
-        stream_set_blocking($this->ipc[$channelNumber], true);
         fwrite($this->ipc[$channelNumber], $message . "\n", strlen($message) + 1);
-        stream_set_blocking($this->ipc[$channelNumber], false);
 
         return $this;
     }
@@ -118,6 +118,9 @@ class FifoAdapter implements IpcAdapterInterface
             $channelNumber = 0;
         }
 
+        if (!isset($this->ipc[$channelNumber])) {
+            throw new \RuntimeException('Channel number ' . $channelNumber . ' is already closed');
+        }
         $readSocket = [$this->ipc[$channelNumber]];
         $writeSocket = $except = [];
         $messages = [];
