@@ -9,7 +9,7 @@ use Zend\Log\Logger;
 use Zend\Log\Writer\Mock;
 use Zend\ServiceManager\ServiceManager;
 use Zeus\Kernel\ProcessManager\Scheduler;
-use Zeus\Kernel\ProcessManager\Scheduler\EventsInterface;
+use Zeus\Kernel\ProcessManager\EventsInterface;
 use ZeusTest\Helpers\ZeusFactories;
 
 class SchedulerTest extends PHPUnit_Framework_TestCase
