@@ -13,7 +13,7 @@ use Zeus\Kernel\ProcessManager\Factory\ProcessFactory;
 use Zeus\Kernel\ProcessManager\Factory\SchedulerFactory;
 use Zeus\Kernel\ProcessManager\Process;
 use Zeus\Kernel\ProcessManager\Scheduler;
-use Zeus\Kernel\ProcessManager\Scheduler\EventsInterface;
+use Zeus\Kernel\ProcessManager\EventsInterface;
 use Zeus\ServerService\Shared\Logger\IpcLogWriter;
 
 trait ZeusFactories
