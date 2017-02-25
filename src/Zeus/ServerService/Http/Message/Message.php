@@ -323,11 +323,11 @@ class Message implements MessageComponentInterface, HeartBeatMessageInterface
     }
 
     /**
-     * @param ConnectionInterface $from
+     * @param ConnectionInterface $connection
      * @param string $buffer
      * @return $this
      */
-    protected function sendHeaders(ConnectionInterface $from, & $buffer)
+    protected function sendHeaders(ConnectionInterface $connection, & $buffer)
     {
         $response = $this->response;
         $request = $this->request;
@@ -369,7 +369,7 @@ class Message implements MessageComponentInterface, HeartBeatMessageInterface
 
         $responseHeaders->addHeader($isKeepAliveConnection? $this->keepAliveConnectionHeader : $this->closeConnectionHeader);
 
-        $from->write(
+        $connection->write(
             $response->renderStatusLine() . "\r\n" .
             $responseHeaders->toString() .
             "Date: " . gmdate('D, d M Y H:i:s') . " GMT\r\n" .
@@ -384,16 +384,16 @@ class Message implements MessageComponentInterface, HeartBeatMessageInterface
     }
 
     /**
-     * @param ConnectionInterface $from
+     * @param ConnectionInterface $connection
      * @param string $buffer
      * @return string
      */
-    protected function sendResponse(ConnectionInterface $from, $buffer)
+    protected function sendResponse(ConnectionInterface $connection, $buffer)
     {
         $isChunkedResponse = $this->response->getMetadata('isChunkedResponse');
 
         if (!$this->headersSent) {
-            $this->sendHeaders($from, $buffer);
+            $this->sendHeaders($connection, $buffer);
         }
 
         if ($this->isBodyAllowedInResponse($this->request)) {
@@ -410,13 +410,12 @@ class Message implements MessageComponentInterface, HeartBeatMessageInterface
 
             if ($buffer !== null) {
                 $this->response->setMetadata('dataSentInBytes', $this->response->getMetadata('dataSentInBytes') + strlen($buffer));
-                $from->write($buffer);
+                $connection->write($buffer);
             }
         }
 
-        $this->request->setMetadata('remoteAddress', $from->getRemoteAddress());
+        $this->request->setMetadata('remoteAddress', $connection->getRemoteAddress());
         if ($this->requestPhase !== static::REQUEST_PHASE_SENDING) {
-            //trigger_error("ESCAPE", E_USER_ERROR);
             return '';
         }
 
@@ -432,10 +431,7 @@ class Message implements MessageComponentInterface, HeartBeatMessageInterface
             $this->restartKeepAliveTimer();
             $this->requestPhase = static::REQUEST_PHASE_KEEP_ALIVE;
         } else {
-            $from->end();
-            $this->initNewRequest();
-            $this->restartKeepAliveCounter();
-            $this->requestPhase = static::REQUEST_PHASE_IDLE;
+            $this->onClose($connection);
         }
 
         return '';

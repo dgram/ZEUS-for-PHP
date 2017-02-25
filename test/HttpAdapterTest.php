@@ -56,7 +56,9 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
     {
         $message = $this->getHttpGetRequestString("/");
         $testConnection = new TestConnection();
-        $this->getHttpAdapter(function() {})->onMessage($testConnection, $message);
+        $httpAdapter = $this->getHttpAdapter(function() {});
+        $httpAdapter->onOpen($testConnection);
+        $httpAdapter->onMessage($testConnection, $message);
 
         $this->assertTrue($testConnection->isConnectionClosed(), "HTTP 1.0 connection should be closed after request");
     }
@@ -81,7 +83,7 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
 
     public function testIfHttp11ConnectionIsClosedWithConnectionHeaderAfterSingleRequest()
     {
-        $message = $this->getHttpGetRequestString("/", ["Connection" => "close", 'Host' => 'localhost'], "1.1");
+        $message = $this->getHttpGetRequestString("/", ["Connection" => "close", 'Host' => '127.0.0.1:80'], "1.1");
         $testConnection = new TestConnection();
         $this->getHttpAdapter(function() {})->onMessage($testConnection, $message);
 
@@ -166,7 +168,30 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
 
             $this->assertEquals(0, strlen($rawResponse->getBody()), "No content should be returned by $method response");
             $this->assertEquals(strlen($testString), $rawResponse->getHeaders()->get('Content-Length')->getFieldValue(), "Incorrect Content-Length header returned by $method response");
+        }
+    }
 
+    public function testIfMultipleRequestsAreHandledByOneMessageInstance()
+    {
+        $testString = '';
+        $requestHandler = function($_request) use (&$request, &$response, & $testString) {$request = $_request; echo $testString; };
+        $testConnection = new TestConnection();
+
+        /** @var Request $request */
+        $request = null;
+        $httpAdapter = $this->getHttpAdapter($requestHandler);
+
+        for($i = 1; $i < 10; $i++) {
+            $pad = str_repeat("A", $i);
+            $testString = "$pad test string";
+
+            $message = $this->getHttpCustomMethodRequestString('HEAD', "/", []);
+
+            $httpAdapter->onMessage($testConnection, $message);
+            $rawResponse = Response::fromString($testConnection->getSentData());
+
+            $this->assertEquals(0, strlen($rawResponse->getBody()), "No content should be returned in response");
+            $this->assertEquals(strlen($testString), $rawResponse->getHeaders()->get('Content-Length')->getFieldValue(), "Incorrect Content-Length header returned in response");
         }
     }
 

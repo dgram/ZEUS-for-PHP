@@ -30,9 +30,9 @@ final class ApcAdapter implements IpcAdapterInterface
 
         if (static::isSupported()) {
             apcu_store($this->namespace . '_readindex_0', 0, 0);
-            apcu_store($this->namespace . '_writeindex_0', 0, 0);
+            apcu_store($this->namespace . '_writeindex_0', 1, 0);
             apcu_store($this->namespace . '_readindex_1', 0, 0);
-            apcu_store($this->namespace . '_writeindex_1', 0, 0);
+            apcu_store($this->namespace . '_writeindex_1', 1, 0);
         }
     }
 
@@ -44,11 +44,19 @@ final class ApcAdapter implements IpcAdapterInterface
      */
     public function send($message)
     {
-        $index = apcu_fetch($this->namespace . '_writeindex_' . $this->channelNumber);
-        apcu_store($this->namespace . '_' . $index, $message, 0);
+        $channelNumber = $this->channelNumber;
 
-        if (65535 < apcu_inc($this->namespace . '_writeindex')) {
-            apcu_store($this->namespace . '_writeindex', 0, 0);
+        if ($channelNumber == 0) {
+            $channelNumber = 1;
+        } else {
+            $channelNumber = 0;
+        }
+
+        $index = apcu_fetch($this->namespace . '_writeindex_' . $channelNumber);
+        apcu_store($this->namespace . '_data_' . $channelNumber . '_' . $index, $message, 0);
+
+        if (65535 < apcu_inc($this->namespace . '_writeindex_' . $channelNumber)) {
+            apcu_store($this->namespace . '_writeindex_' . $channelNumber, 1, 0);
         }
 
         return $this;
@@ -63,15 +71,9 @@ final class ApcAdapter implements IpcAdapterInterface
     {
         $channelNumber = $this->channelNumber;
 
-        if ($channelNumber == 0) {
-            $channelNumber = 1;
-        } else {
-            $channelNumber = 0;
-        }
-
         $readIndex = apcu_fetch($this->namespace . '_readindex_' . $channelNumber);
-        $result = apcu_fetch($this->namespace . '_' . $readIndex);
-        apcu_delete($this->namespace . '_' . $readIndex);
+        $result = apcu_fetch($this->namespace . '_data_' . $channelNumber . '_' . $readIndex);
+        apcu_delete($this->namespace . '_data_' . $channelNumber . '_' . $readIndex);
 
         if (65535 < apcu_inc($this->namespace . '_readindex_' . $channelNumber)) {
             apcu_store($this->namespace . '_readindex_' . $channelNumber, 0, 0);

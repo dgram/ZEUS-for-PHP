@@ -358,6 +358,12 @@ The above configuration parameters have been described in the __Process Schedule
 
 # Changelog
 
+## Version 1.1.7
+- [Fix] Fixed read/write indexing in `ApcAdapter`
+- [Fix] Performance fix in HTTP hosts cache (ZEUS Web Server)
+- [Tests improvements] Code coverage tests moved from PHP 5.6 to 7.1
+- [Tests improvements] Enabled APCu tests in Travis
+
 ## Version 1.1.6
 - [Fix] Various fixes for IpcAdapters: `MsgAdapter`, `ApcAdapter`, `FifoAdapter`
 - [Fix] Fixed permissions of some PHP files
@@ -366,7 +372,7 @@ The above configuration parameters have been described in the __Process Schedule
 - [Feature] New event `Zeus\Kernel\ProcessManager\EventsInterface::ON_PROCESS_EXIT` introduced
 - [Feature] Improved console help
 - [Unclassified] Dead code removal, README tweaks
-- [Tests improvements] More Scheduler tests added
+- [Tests improvements] More `Scheduler` tests added
 
 ## Version 1.1.4
 - [Unit tests fix] Fix for division by zero error in PHP 5.6 unit tests in `ProcessTitle` class

@@ -29,10 +29,6 @@ trait Header
             }
         }
 
-        // URI host & port
-        $host = null;
-        $port = null;
-
         if (isset($this->serverHostCache[$fullHost])) {
             $currentUri = $request->getUri();
             $cachedUri = $this->serverHostCache[$fullHost];
@@ -42,12 +38,24 @@ trait Header
             return $this;
         }
 
+        // URI host & port
+        if (preg_match('|\:(\d+)$|', $connectionServerAddress, $matches)) {
+            $host = substr($connectionServerAddress, 0, -1 * (strlen($matches[1]) + 1));
+            $port = (int)$matches[1];
+        } else {
+            $host = $connectionServerAddress;
+            $port = null;
+        }
+
         // Set the host
         if ($fullHost) {
             // works for regname, IPv4 & IPv6
-            if (preg_match('|\:(\d+)$|', $fullHost, $matches)) {
-                $host = substr($fullHost, 0, -1 * (strlen($matches[1]) + 1));
-                $port = (int) $matches[1];
+            if (preg_match('~\:(\d+)$~', $fullHost, $matches)) {
+                $host2 = substr($fullHost, 0, -1 * (strlen($matches[1]) + 1));
+                $port2 = (int) $matches[1];
+            } else {
+                $host2 = $fullHost;
+                $port2 = $port;
             }
 
             // set up a validator that check if the hostname is legal (not spoofed)
@@ -57,23 +65,13 @@ trait Header
                 'useTldCheck' => false,
             ]);
             // If invalid. Reset the host & port
-            if (!$hostnameValidator->isValid($host)) {
-                $host = null;
-                $port = null;
-                //$fullHost = '';
-            } else {
+            if ($host2 && $hostnameValidator->isValid($host2)) {
+                $host = $host2;
+                $port = $port2;
                 $this->serverHostCache[$fullHost] = [
                     'host' => $host,
                     'port' => $port
                 ];
-            }
-        }
-
-        if (!$host) {
-            if (preg_match('|\:(\d+)$|', $connectionServerAddress, $matches)) {
-                $host = substr($connectionServerAddress, 0, -1 * (strlen($matches[1]) + 1));
-                $port = (int)$matches[1];
-                //$fullHost = $connectionServerAddress;
             }
         }
 
@@ -113,23 +111,6 @@ trait Header
             return $request;
         } catch (\Exception $e) {
             throw new \InvalidArgumentException('Incorrect headers: ' . $this->headers, Response::STATUS_CODE_400);
-        }
-    }
-
-    /**
-     * @param Request $request
-     * @return bool
-     */
-    protected function isBodyAllowedInRequest2(Request $request)
-    {
-        switch ($request->getMethod()) {
-            case 'GET':
-            case 'OPTIONS':
-            case 'HEAD':
-            case 'TRACE':
-                return false;
-            default:
-                return true;
         }
     }
 

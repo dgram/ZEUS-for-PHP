@@ -11,9 +11,9 @@ class TestConnection implements ConnectionInterface
 
     protected $isConnectionClosed = false;
 
-    protected $remoteAddress = '127.0.0.2';
+    protected $remoteAddress = '127.0.0.2:7071';
 
-    protected $serverAddress = '127.0.0.1';
+    protected $serverAddress = '127.0.0.1:7070';
 
     /**
      * Send data to the connection
@@ -93,7 +93,10 @@ class TestConnection implements ConnectionInterface
      */
     public function getSentData()
     {
-        return $this->dataSent;
+        $data = $this->dataSent;
+        $this->dataSent = '';
+
+        return $data;
     }
 
     /**
