@@ -63,10 +63,10 @@ before_install:
   - if [[ $EXECUTE_TEST_COVERALLS != 'true' ]]; then phpenv config-rm xdebug.ini || return 0 ; fi
   - if [[ $EXECUTE_TEST_COVERALLS == 'true' ]]; then composer require --dev --no-update satooshi/php-coveralls ; fi
   - if [[ $TRAVIS_PHP_VERSION = '5.6' ]] ; then echo yes | pecl install apcu-4.0.10; fi;
-  - if [[ $TRAVIS_PHP_VERSION = 7.* ]] ; then mv /home/travis/.phpenv/versions/`phpenv global`/etc/conf.d/apc.ini /home/travis/.phpenv/versions/`phpenv global`/etc/conf.d/40-apc.ini ; fi;
-  - if [[ $TRAVIS_PHP_VERSION = 7.* ]] ; then pecl config-set preferred_state beta; echo yes | pecl install apcu; fi;
-  - if [[ $TRAVIS_PHP_VERSION = 7.* ]] ; then pecl config-set preferred_state beta; echo yes | pecl install apcu_bc; fi;
-  - if [[ $TRAVIS_PHP_VERSION = 7.* ]] ; then mv /home/travis/.phpenv/versions/`phpenv global`/etc/conf.d/apcu.ini /home/travis/.phpenv/versions/`phpenv global`/etc/conf.d/20-apcu.ini ; fi;
+  - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then pecl config-set preferred_state beta; echo yes | pecl install apcu; fi;
+  - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then pecl config-set preferred_state beta; echo yes | pecl install apcu_bc; fi;
+  - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then mv /home/travis/.phpenv/versions/`phpenv global`/etc/conf.d/apc.ini /home/travis/.phpenv/versions/`phpenv global`/etc/conf.d/40-apc.ini ; fi;
+  - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then mv /home/travis/.phpenv/versions/`phpenv global`/etc/conf.d/apcu.ini /home/travis/.phpenv/versions/`phpenv global`/etc/conf.d/20-apcu.ini ; fi;
   - travis_retry composer self-update
 
 install:
