@@ -67,7 +67,7 @@ before_install:
   - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then pecl config-set preferred_state beta; echo yes | pecl install apcu; fi;
   - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then pecl config-set preferred_state beta; echo yes | pecl install apcu_bc; fi;
   - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then tail -n +3 /home/travis/.phpenv/versions/`phpenv global`/etc/php.ini > /home/travis/.phpenv/versions/`phpenv global`/etc/php.ini ; fi;
-  - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then  printf 'extension="apcu.so"'"\n"'extension="apc.so"'"\n" >> /home/travis/.phpenv/versions/`phpenv global`/etc/php.ini ; fi;
+  - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then  printf 'extension="apcu.so"'"\n"'extension="apc.so"'"\napc.enabled=1\napc.enable_cli=1\n" >> /home/travis/.phpenv/versions/`phpenv global`/etc/php.ini ; fi;
   - travis_retry composer self-update
 
 install:
