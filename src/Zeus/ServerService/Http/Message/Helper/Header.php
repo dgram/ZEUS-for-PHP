@@ -31,7 +31,6 @@ trait Header
 
         // URI host & port
         $host = null;
-        $port = null;
 
         if (isset($this->serverHostCache[$fullHost])) {
             $currentUri = $request->getUri();
@@ -45,7 +44,7 @@ trait Header
         // Set the host
         if ($fullHost) {
             // works for regname, IPv4 & IPv6
-            if (preg_match('|\:(\d+)$|', $fullHost, $matches)) {
+            if (preg_match('~\:(\d+)$~', $fullHost, $matches)) {
                 $host = substr($fullHost, 0, -1 * (strlen($matches[1]) + 1));
                 $port = (int) $matches[1];
             }
@@ -60,7 +59,6 @@ trait Header
             if (!$hostnameValidator->isValid($host)) {
                 $host = null;
                 $port = null;
-                //$fullHost = '';
             } else {
                 $this->serverHostCache[$fullHost] = [
                     'host' => $host,
@@ -73,7 +71,11 @@ trait Header
             if (preg_match('|\:(\d+)$|', $connectionServerAddress, $matches)) {
                 $host = substr($connectionServerAddress, 0, -1 * (strlen($matches[1]) + 1));
                 $port = (int)$matches[1];
-                //$fullHost = $connectionServerAddress;
+
+                $this->serverHostCache[$fullHost] = [
+                    'host' => $host,
+                    'port' => $port
+                ];
             }
         }
 
@@ -113,23 +115,6 @@ trait Header
             return $request;
         } catch (\Exception $e) {
             throw new \InvalidArgumentException('Incorrect headers: ' . $this->headers, Response::STATUS_CODE_400);
-        }
-    }
-
-    /**
-     * @param Request $request
-     * @return bool
-     */
-    protected function isBodyAllowedInRequest2(Request $request)
-    {
-        switch ($request->getMethod()) {
-            case 'GET':
-            case 'OPTIONS':
-            case 'HEAD':
-            case 'TRACE':
-                return false;
-            default:
-                return true;
         }
     }
 

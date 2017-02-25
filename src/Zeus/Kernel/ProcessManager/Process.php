@@ -153,10 +153,6 @@ final class Process
      */
     protected function terminateProcess($exception = null)
     {
-        if ($exception) {
-            $this->reportException($exception);
-        }
-
         // child is dying, time to live equals zero
         // wake up the ServerDaemon to inform him that this child is dying
         $this->logger->debug(sprintf("Shutting down after finishing %d tasks", $this->status->getNumberOfFinishedTasks()));
@@ -200,7 +196,7 @@ final class Process
             }
         }
 
-        $this->terminateProcess($exception);
+        $this->terminateProcess();
     }
 
     /**

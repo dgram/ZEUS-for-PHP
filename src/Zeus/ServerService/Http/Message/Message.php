@@ -416,7 +416,6 @@ class Message implements MessageComponentInterface, HeartBeatMessageInterface
 
         $this->request->setMetadata('remoteAddress', $from->getRemoteAddress());
         if ($this->requestPhase !== static::REQUEST_PHASE_SENDING) {
-            //trigger_error("ESCAPE", E_USER_ERROR);
             return '';
         }
 

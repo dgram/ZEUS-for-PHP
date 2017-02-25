@@ -81,7 +81,7 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
 
     public function testIfHttp11ConnectionIsClosedWithConnectionHeaderAfterSingleRequest()
     {
-        $message = $this->getHttpGetRequestString("/", ["Connection" => "close", 'Host' => 'localhost'], "1.1");
+        $message = $this->getHttpGetRequestString("/", ["Connection" => "close", 'Host' => '127.0.0.1:80'], "1.1");
         $testConnection = new TestConnection();
         $this->getHttpAdapter(function() {})->onMessage($testConnection, $message);
 
