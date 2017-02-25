@@ -29,9 +29,6 @@ trait Header
             }
         }
 
-        // URI host & port
-        $host = null;
-
         if (isset($this->serverHostCache[$fullHost])) {
             $currentUri = $request->getUri();
             $cachedUri = $this->serverHostCache[$fullHost];
@@ -41,12 +38,24 @@ trait Header
             return $this;
         }
 
+        // URI host & port
+        if (preg_match('|\:(\d+)$|', $connectionServerAddress, $matches)) {
+            $host = substr($connectionServerAddress, 0, -1 * (strlen($matches[1]) + 1));
+            $port = (int)$matches[1];
+        } else {
+            $host = $connectionServerAddress;
+            $port = null;
+        }
+
         // Set the host
         if ($fullHost) {
             // works for regname, IPv4 & IPv6
             if (preg_match('~\:(\d+)$~', $fullHost, $matches)) {
-                $host = substr($fullHost, 0, -1 * (strlen($matches[1]) + 1));
-                $port = (int) $matches[1];
+                $host2 = substr($fullHost, 0, -1 * (strlen($matches[1]) + 1));
+                $port2 = (int) $matches[1];
+            } else {
+                $host2 = $fullHost;
+                $port2 = $port;
             }
 
             // set up a validator that check if the hostname is legal (not spoofed)
@@ -56,22 +65,9 @@ trait Header
                 'useTldCheck' => false,
             ]);
             // If invalid. Reset the host & port
-            if (!$hostnameValidator->isValid($host)) {
-                $host = null;
-                $port = null;
-            } else {
-                $this->serverHostCache[$fullHost] = [
-                    'host' => $host,
-                    'port' => $port
-                ];
-            }
-        }
-
-        if (!$host) {
-            if (preg_match('|\:(\d+)$|', $connectionServerAddress, $matches)) {
-                $host = substr($connectionServerAddress, 0, -1 * (strlen($matches[1]) + 1));
-                $port = (int)$matches[1];
-
+            if ($host2 && $hostnameValidator->isValid($host2)) {
+                $host = $host2;
+                $port = $port2;
                 $this->serverHostCache[$fullHost] = [
                     'host' => $host,
                     'port' => $port
