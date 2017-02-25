@@ -66,7 +66,7 @@ before_install:
   - if [[ $TRAVIS_PHP_VERSION = '5.6' ]] ; then echo yes | pecl install apcu-4.0.10; fi;
   - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then pecl config-set preferred_state beta; echo yes | pecl install apcu; fi;
   - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then pecl config-set preferred_state beta; echo yes | pecl install apcu_bc; fi;
-  - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then ls -al /home/travis/.phpenv/versions/`phpenv global`/etc/conf.d ; fi;
+  - if [[ $TRAVIS_PHP_VERSION = 7.1 ]] ; then cat /home/travis/.phpenv/versions/`phpenv global`/etc/php.ini ; fi;
   - travis_retry composer self-update
 
 install:
