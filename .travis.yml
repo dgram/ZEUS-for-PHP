@@ -32,7 +32,6 @@ matrix:
     - php: 7.0
       env:
         - DEPS=latest
-        - EXECUTE_TEST_COVERALLS=true
     - php: 7.1
       env:
         - DEPS=lowest
@@ -42,6 +41,7 @@ matrix:
     - php: 7.1
       env:
         - DEPS=latest
+        - EXECUTE_TEST_COVERALLS=true
     - php: hhvm
       env:
         - DEPS=lowest
