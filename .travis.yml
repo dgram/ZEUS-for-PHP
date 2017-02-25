@@ -77,7 +77,6 @@ before_script:
   - mkdir -p build/logs
 
 script:
-  - composer test
   - if [[ $CS_CHECK == 'true' ]]; then composer cs-check ; fi
   - if [[ $EXECUTE_TEST_COVERALLS == 'true' ]]; then phpunit --coverage-clover clover.xml ; fi
   - if [[ $EXECUTE_TEST_COVERALLS != 'true' ]]; then phpunit ; fi
