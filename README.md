@@ -360,6 +360,7 @@ The above configuration parameters have been described in the __Process Schedule
 
 ## Version 1.1.7
 - [Fix] Fixed read/write indexing in `ApcAdapter`
+- [Fix] Performance fix in HTTP hosts cache (ZEUS Web Server)
 - [Tests improvements] Code coverage tests moved from PHP 5.6 to 7.1
 - [Tests improvements] Enabled APCu tests in Travis
 
