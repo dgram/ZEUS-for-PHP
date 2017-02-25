@@ -56,7 +56,9 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
     {
         $message = $this->getHttpGetRequestString("/");
         $testConnection = new TestConnection();
-        $this->getHttpAdapter(function() {})->onMessage($testConnection, $message);
+        $httpAdapter = $this->getHttpAdapter(function() {});
+        $httpAdapter->onOpen($testConnection);
+        $httpAdapter->onMessage($testConnection, $message);
 
         $this->assertTrue($testConnection->isConnectionClosed(), "HTTP 1.0 connection should be closed after request");
     }
