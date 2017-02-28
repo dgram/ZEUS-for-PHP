@@ -57,14 +57,12 @@ class StaticFileDispatcher implements DispatcherInterface
 
                 return $httpResponse;
             }
-        } else if (is_dir($fileName)) {
-            $code = Response::STATUS_CODE_403;
         } else {
+            $code = is_dir($fileName) ? Response::STATUS_CODE_403 : Response::STATUS_CODE_404;
+
             if ($this->anotherDispatcher) {
                 return $this->anotherDispatcher->dispatch($httpRequest);
             }
-
-            $code = Response::STATUS_CODE_404;
         }
 
         return $this->getHttpResponse($code, $httpRequest->getVersion());
