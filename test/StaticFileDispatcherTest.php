@@ -6,6 +6,7 @@ use PHPUnit_Framework_TestCase;
 use Zend\Http\Request;
 use Zend\Http\Response;
 use Zeus\ServerService\Http\Dispatcher\StaticFileDispatcher;
+use ZeusTest\Helpers\DummyFileDispatcher;
 
 class StaticFileDispatcherTest extends PHPUnit_Framework_TestCase
 {
@@ -103,5 +104,17 @@ class StaticFileDispatcherTest extends PHPUnit_Framework_TestCase
         $request = Request::fromString("GET ../$fileName HTTP/1.0\r\n\r\n");
         $response = $dispatcher->dispatch($request);
         $this->assertEquals(Response::STATUS_CODE_400, $response->getStatusCode());
+    }
+
+    public function testAnotherDispatcherWasUsed()
+    {
+        $config['public_directory'] = 'tmp/';
+
+        $anotherDispatcher = new DummyFileDispatcher($config);
+        $dispatcher = new StaticFileDispatcher($config, $anotherDispatcher);
+        $request = Request::fromString("GET incorrect.path HTTP/1.0\r\n\r\n");
+        $response = $dispatcher->dispatch($request);
+
+        $this->assertTrue($anotherDispatcher->isDispatchPerformed());
     }
 }
