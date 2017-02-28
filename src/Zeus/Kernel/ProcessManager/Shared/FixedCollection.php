@@ -28,7 +28,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function offsetExists($offset)
     {
-        $index = array_search($offset, $this->ids->toArray());
+        $index = array_search($offset, $this->ids->toArray(), true);
 
         return $index !== false;
     }
@@ -44,7 +44,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function offsetGet($offset)
     {
-        $index = array_search($offset, $this->ids->toArray());
+        $index = array_search($offset, $this->ids->toArray(), true);
 
         if ($index === false) {
             return null;
@@ -67,7 +67,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function offsetSet($offset, $value)
     {
-        $index = array_search($offset, $this->ids->toArray());
+        $index = array_search($offset, $this->ids->toArray(), true);
 
         if ($index !== false) {
             $this->values[$index] = $value;
@@ -105,7 +105,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function offsetUnset($offset)
     {
-        $index = array_search($offset, $this->ids->toArray());
+        $index = array_search($offset, $this->ids->toArray(), true);
 
         $this->ids[$index] = null;
         $this->values[$index] = null;
@@ -119,6 +119,14 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function current()
     {
+        if ($this->values->key() === null) {
+            $this->next();
+        }
+
+        if ($this->values->key() === null) {
+            return null;
+        }
+
         return $this->values->current();
     }
 
@@ -145,6 +153,15 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function key()
     {
         $index = $this->values->key();
+
+        if ($this->ids[$index] === null) {
+            $this->next();
+        }
+
+        $index = $this->values->key();
+        if ($this->ids[$index] === null) {
+            return null;
+        }
 
         return $this->ids[$index];
     }
