@@ -133,6 +133,37 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($processesCreated, $processesInitialized, "Scheduler should have initialized all requested processes");
     }
 
+    public function getSchedulerLaunchTypes()
+    {
+        return [
+            [true, 'running in background'],
+            [false, 'running in foreground'],
+        ];
+    }
+
+    /**
+     * @dataProvider getSchedulerLaunchTypes
+     */
+    public function testSchedulerStartingEvents($runInBackground, $launchDescription)
+    {
+        $serverStarted = false;
+        $schedulerStarted = false;
+        $scheduler = $this->getScheduler(1);
+        $events = $scheduler->getEventManager();
+
+        $events->attach(EventsInterface::ON_SERVER_START, function() use (& $serverStarted) {
+            $serverStarted = true;
+        });
+
+        $events->attach(EventsInterface::ON_SCHEDULER_START, function() use (& $schedulerStarted) {
+            $schedulerStarted = true;
+        });
+
+        $scheduler->start($runInBackground);
+        $this->assertTrue($serverStarted, 'Server should have been started when ' . $launchDescription);
+        $this->assertTrue($serverStarted, 'Scheduler should have been started when ' . $launchDescription);
+    }
+
     public function testProcessErrorHandling()
     {
         $scheduler = $this->getScheduler(1);

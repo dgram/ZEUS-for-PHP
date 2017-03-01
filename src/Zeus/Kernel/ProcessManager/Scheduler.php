@@ -8,7 +8,6 @@ use Zend\Log\LoggerInterface;
 use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
 use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
 use Zeus\Kernel\ProcessManager\Helper\Logger;
-use Zeus\Kernel\ProcessManager\EventsInterface;
 use Zeus\Kernel\ProcessManager\Scheduler\ProcessCollection;
 use Zeus\Kernel\ProcessManager\Status\ProcessState;
 use Zeus\Kernel\IpcServer\Message;
@@ -153,7 +152,6 @@ final class Scheduler
      */
     protected function attach(EventManagerInterface $events)
     {
-        $events->detach([$this, 'startScheduler']);
         $events->attach(EventsInterface::ON_PROCESS_CREATE, function(EventInterface $e) { $this->addNewProcess($e);}, -10000);
         $events->attach(EventsInterface::ON_PROCESS_INIT, function(EventInterface $e) { $this->onProcessInit($e);});
         $events->attach(EventsInterface::ON_PROCESS_TERMINATED, function(EventInterface $e) { $this->onProcessExit($e);}, -10000);
@@ -256,16 +254,23 @@ final class Scheduler
         $this->collectCycles();
 
         $events = $this->getEventManager();
+        $events->attach(EventsInterface::ON_SCHEDULER_START, [$this, 'startScheduler'], 0);
 
         try {
             if (!$launchAsDaemon) {
-                $events->attach(EventsInterface::ON_SERVER_START, [$this, 'startScheduler'], 100000);
                 $this->getEventManager()->trigger(EventsInterface::ON_SERVER_START, $this, $this->getEventExtraData());
+                $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_START, $this, $this->getEventExtraData());
 
                 return $this;
             }
 
-            $events->attach(EventsInterface::ON_PROCESS_INIT, [$this, 'startScheduler'], 100000);
+            $events->attach(EventsInterface::ON_PROCESS_INIT, function(EventInterface $e) {
+                if ($e->getParam('server')) {
+                    $e->stopPropagation(true);
+                    $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_START, $this, $this->getEventExtraData());
+                }
+            }, 100000);
+
             $events->attach(EventsInterface::ON_PROCESS_CREATE,
                 function (EventInterface $event) {
                     $pid = $event->getParam('uid');
@@ -300,8 +305,6 @@ final class Scheduler
 
         $this->attach($this->getEventManager());
 
-        $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_START, $this, $this->getEventExtraData());
-
         $config = $this->getConfig();
 
         if ($config->isProcessCacheEnabled()) {
@@ -309,7 +312,6 @@ final class Scheduler
         }
 
         $this->log(\Zend\Log\Logger::INFO, "Scheduler started");
-        $event->stopPropagation(true);
 
         return $this->mainLoop();
     }
@@ -431,8 +433,6 @@ final class Scheduler
         $this->processTemplate->setEventManager($this->getEventManager());
         $this->processTemplate->setConfig($this->getConfig());
         $this->processTemplate->mainLoop();
-
-        //exit(0);
     }
 
     /**
