@@ -358,6 +358,13 @@ The above configuration parameters have been described in the __Process Schedule
 
 # Changelog
 
+## Version 1.1.8
+- [Feature] Added MIME type detection to ZEUS Web Server's `StaticFileDispatcher`
+- [Tests improvements] Code coverage for `StaticFileDispatcher`
+- [Fix] ZEUS Web Server returned 404 HTTP status code instead of 400 when attempting to list a directory
+- [Fix] Fixed compatibility between `FixedCollection` and HHVM
+- [Fix] Resolved issue wih invalid handling of first element in `FixedCollection`
+
 ## Version 1.1.7
 - [Fix] Fixed read/write indexing in `ApcAdapter`
 - [Fix] Performance fix in HTTP hosts cache (ZEUS Web Server)

@@ -3,8 +3,10 @@
 namespace Zeus\ServerService\Http\Dispatcher;
 
 use Zend\Http\Header\ContentLength;
+use Zend\Http\Header\ContentType;
 use Zend\Http\Request;
 use Zend\Http\Response;
+use Zeus\ServerService\Http\MimeType;
 
 class StaticFileDispatcher implements DispatcherInterface
 {
@@ -50,16 +52,17 @@ class StaticFileDispatcher implements DispatcherInterface
             } else {
                 $httpResponse = $this->getHttpResponse($code, $httpRequest->getVersion());
                 $httpResponse->getHeaders()->addHeader(new ContentLength(filesize($fileName)));
+                $httpResponse->getHeaders()->addHeader(new ContentType(MimeType::getMimeType($fileName)));
                 readfile($fileName);
 
                 return $httpResponse;
             }
         } else {
+            $code = is_dir($fileName) ? Response::STATUS_CODE_403 : Response::STATUS_CODE_404;
+
             if ($this->anotherDispatcher) {
                 return $this->anotherDispatcher->dispatch($httpRequest);
             }
-
-            $code = Response::STATUS_CODE_404;
         }
 
         return $this->getHttpResponse($code, $httpRequest->getVersion());
