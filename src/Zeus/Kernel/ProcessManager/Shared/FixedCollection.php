@@ -1,19 +1,14 @@
 <?php
-
 namespace Zeus\Kernel\ProcessManager\Shared;
-
 class FixedCollection implements \Iterator, \ArrayAccess, \Countable
 {
     protected $ids = [];
-
     protected $values = [];
-
     public function __construct($arraySize)
     {
         $this->ids = new \SplFixedArray($arraySize);
         $this->values = new \SplFixedArray($arraySize);
     }
-
     /**
      * Whether a offset exists
      * @link http://php.net/manual/en/arrayaccess.offsetexists.php
@@ -29,10 +24,8 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function offsetExists($offset)
     {
         $index = array_search($offset, $this->ids->toArray(), true);
-
         return $index !== false;
     }
-
     /**
      * Offset to retrieve
      * @link http://php.net/manual/en/arrayaccess.offsetget.php
@@ -45,14 +38,11 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function offsetGet($offset)
     {
         $index = array_search($offset, $this->ids->toArray(), true);
-
         if ($index === false) {
             return null;
         }
-
         return $this->values[$index];
     }
-
     /**
      * Offset to set
      * @link http://php.net/manual/en/arrayaccess.offsetset.php
@@ -68,24 +58,19 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function offsetSet($offset, $value)
     {
         $index = array_search($offset, $this->ids->toArray(), true);
-
         if ($index !== false) {
             $this->values[$index] = $value;
             return;
         }
-
         foreach ($this->ids as $id => $index) {
             if ($index === null) {
                 $this->ids[$id] = $offset;
                 $this->values[$id] = $value;
-
                 return;
             }
         }
-
         throw new \RuntimeException("Array slots exhausted");
     }
-
     /**
      * @return int
      */
@@ -93,7 +78,6 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     {
         return $this->ids->getSize();
     }
-
     /**
      * Offset to unset
      * @link http://php.net/manual/en/arrayaccess.offsetunset.php
@@ -106,11 +90,9 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function offsetUnset($offset)
     {
         $index = array_search($offset, $this->ids->toArray(), true);
-
         $this->ids[$index] = null;
         $this->values[$index] = null;
     }
-
     /**
      * Return the current element
      * @link http://php.net/manual/en/iterator.current.php
@@ -122,14 +104,11 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
         if ($this->values->key() === null) {
             $this->next();
         }
-
-        if ($this->values->key() === null) {
+        if (!$this->values->valid()) {
             return null;
         }
-
         return $this->values->current();
     }
-
     /**
      * Move forward to next element
      * @link http://php.net/manual/en/iterator.next.php
@@ -141,14 +120,8 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
         do {
             $this->values->next();
             $index = $this->values->key();
-
-            if (is_int($index) && isset($this->ids[$index])) {
-                return;
-            }
-            // @todo: this while() is so complicated due to HHVM incompatibility with PHP, try to find better solution
-        } while (is_int($index) && !empty($this->ids[$index]));
+        } while ($index < $this->ids->getSize() && is_int($index) && $this->ids[$index] === null);
     }
-
     /**
      * Return the key of the current element
      * @link http://php.net/manual/en/iterator.key.php
@@ -158,15 +131,15 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function key()
     {
         $index = $this->values->key();
-        if (!is_int($index) || is_null($this->ids[$index])) {
+        if (array_key_exists($index, $this->ids) && $this->ids[$index] === null) {
             $this->next();
-
-            $index = $this->values->key();
         }
-
-        return (is_int($index) && array_key_exists($index, $this->ids)) ? $this->ids[$index] : null;
+        $index = $this->values->key();
+        if (!array_key_exists($index, $this->ids) || $this->ids[$index] === null) {
+            return null;
+        }
+        return $this->ids[$index];
     }
-
     /**
      * Checks if current position is valid
      * @link http://php.net/manual/en/iterator.valid.php
@@ -176,13 +149,8 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function valid()
     {
-        if (count(array_filter($this->ids->toArray())) === 0) {
-            return false;
-        }
-
-        return $this->values->key() < $this->values->getSize();
+        return $this->key() !== null;
     }
-
     /**
      * Rewind the Iterator to the first element
      * @link http://php.net/manual/en/iterator.rewind.php
@@ -193,7 +161,6 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     {
         $this->values->rewind();
     }
-
     /**
      * Count elements of an object
      * @link http://php.net/manual/en/countable.count.php
