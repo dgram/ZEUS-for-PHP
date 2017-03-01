@@ -101,13 +101,13 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function current()
     {
-        if ($this->values->key() === null) {
-            $this->next();
-        }
         if (!$this->values->valid()) {
-            return null;
+            $this->values->next();
         }
-        return $this->values->current();
+
+        if ($this->values->valid()) {
+            return $this->values->current();
+        }
     }
     /**
      * Move forward to next element
@@ -120,7 +120,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
         do {
             $this->values->next();
             $index = $this->values->key();
-        } while ($index < $this->ids->getSize() && is_int($index) && $this->ids[$index] === null);
+        } while ($this->values->valid() && $this->ids[$index] === null);
     }
     /**
      * Return the key of the current element
@@ -131,13 +131,15 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function key()
     {
         $index = $this->values->key();
-        if (array_key_exists($index, $this->ids) && $this->ids[$index] === null) {
+        if ($this->values->valid() && $this->ids[$index] === null) {
             $this->next();
         }
-        $index = $this->values->key();
-        if (!array_key_exists($index, $this->ids) || $this->ids[$index] === null) {
+
+        if (!$this->values->valid()) {
             return null;
         }
+
+        $index = $this->values->key();
         return $this->ids[$index];
     }
     /**
