@@ -2,6 +2,7 @@
 
 namespace Zeus\Kernel\ProcessManager;
 
+use Zend\Console\Console;
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zend\Log\LoggerInterface;
@@ -130,7 +131,7 @@ final class Scheduler
         $this->setLogger($logger);
         $this->setLoggerExtraDetails(['service' => $this->config->getServiceName()]);
 
-        if (!defined('STDIN')) {
+        if (!Console::isConsole()) {
             throw new ProcessManagerException("This application must be launched from the Command Line Interpreter", ProcessManagerException::CLI_MODE_REQUIRED);
         }
 

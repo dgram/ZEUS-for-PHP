@@ -3,13 +3,16 @@
 namespace ZeusTest;
 
 use PHPUnit_Framework_TestCase;
+use Zend\Console\Console;
 use Zend\EventManager\Event;
 use Zend\EventManager\EventInterface;
 use Zend\Log\Logger;
 use Zend\Log\Writer\Mock;
+use Zend\ServiceManager\Exception\ServiceNotCreatedException;
 use Zend\ServiceManager\ServiceManager;
 use Zend\Stdlib\SplPriorityQueue;
 use Zend\Stdlib\SplQueue;
+use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
 use Zeus\Kernel\ProcessManager\Scheduler;
 use Zeus\Kernel\ProcessManager\EventsInterface;
 use ZeusTest\Helpers\ZeusFactories;
@@ -25,12 +28,25 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
 
     public function setUp()
     {
+        Console::overrideIsConsole(true);
         chdir(__DIR__);
     }
 
     public function tearDown()
     {
         parent::tearDown();
+    }
+
+    public function testCliDetection()
+    {
+        Console::overrideIsConsole(false);
+
+        try {
+            $this->getScheduler();
+        } catch (\Exception $e) {
+            $this->assertInstanceOf(ServiceNotCreatedException::class, $e);
+            $this->assertInstanceOf(ProcessManagerException::class, $e->getPrevious());
+        }
     }
 
     public function testApplicationInit()

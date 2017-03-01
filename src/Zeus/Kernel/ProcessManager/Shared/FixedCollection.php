@@ -146,7 +146,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
                 return;
             }
             // @todo: this while() is so complicated due to HHVM incompatibility with PHP, try to find better solution
-        } while ($index < $this->ids->getSize() && is_int($index) && $this->ids[$index] === null);
+        } while (is_int($index) && !empty($this->ids[$index]));
     }
 
     /**
@@ -164,7 +164,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
             $index = $this->values->key();
         }
 
-        return (array_key_exists($index, $this->ids) && !is_null($this->ids[$index])) ? $this->ids[$index] : null;
+        return (is_int($index) && array_key_exists($index, $this->ids)) ? $this->ids[$index] : null;
     }
 
     /**
