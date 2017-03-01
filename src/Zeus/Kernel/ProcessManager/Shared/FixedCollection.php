@@ -141,7 +141,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
         do {
             $this->values->next();
             $index = $this->values->key();
-        } while ($index < $this->ids->getSize() && $this->ids[$index] === null);
+        } while ($index < $this->ids->getSize() && ($index === null || $this->ids[$index] === null));
     }
 
     /**
