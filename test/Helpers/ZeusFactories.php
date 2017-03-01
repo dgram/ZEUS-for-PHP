@@ -14,6 +14,7 @@ use Zeus\Kernel\ProcessManager\Factory\SchedulerFactory;
 use Zeus\Kernel\ProcessManager\Process;
 use Zeus\Kernel\ProcessManager\Scheduler;
 use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\ServerService\Shared\Factory\AbstractServerServiceFactory;
 use Zeus\ServerService\Shared\Logger\IpcLogWriter;
 
 trait ZeusFactories
@@ -25,6 +26,7 @@ trait ZeusFactories
     {
         $sm = new ServiceManager();
         $sm->addAbstractFactory(IpcAdapterAbstractFactory::class);
+        $sm->addAbstractFactory(AbstractServerServiceFactory::class);
         $sm->setFactory(Scheduler::class, SchedulerFactory::class);
         $sm->setFactory(Process::class, ProcessFactory::class);
         $sm->setFactory(IpcAdapterInterface::class, IpcServerFactory::class);
