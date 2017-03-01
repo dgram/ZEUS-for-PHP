@@ -6,6 +6,7 @@ use PHPUnit_Framework_TestCase;
 use Zend\Http\Request;
 use Zend\Http\Response;
 use Zeus\ServerService\Http\Message\Message;
+use Zeus\ServerService\Shared\React\HeartBeatMessageInterface;
 use Zeus\ServerService\Shared\React\MessageComponentInterface;
 use ZeusTest\Helpers\TestConnection;
 
@@ -47,9 +48,13 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
     {
         $message = $this->getHttpGetRequestString("/");
         $dispatcherLaunched = false;
-        $this->getHttpAdapter(function() use (& $dispatcherLaunched) {$dispatcherLaunched = true;})->onMessage(new TestConnection(), $message);
+        /** @var Message $httpAdapter */
+        $httpAdapter = $this->getHttpAdapter(function() use (& $dispatcherLaunched) {$dispatcherLaunched = true;});
+        $httpAdapter->onMessage(new TestConnection(), $message);
 
         $this->assertTrue($dispatcherLaunched, "Dispatcher should be called");
+
+        $this->assertEquals(1, $httpAdapter->getNumberOfFinishedRequests());
     }
 
     public function testIfHttp10ConnectionIsClosedAfterSingleRequest()
@@ -79,6 +84,24 @@ class HttpAdapterTest extends PHPUnit_Framework_TestCase
         $this->getHttpAdapter(function() {})->onMessage($testConnection, $message);
 
         $this->assertFalse($testConnection->isConnectionClosed(), "HTTP 1.1 connection should be left open after request");
+    }
+
+    public function testIfHttp11ConnectionIsClosedAfterTimeout()
+    {
+        $message = $this->getHttpGetRequestString("/", ['Host' => 'localhost'], "1.1");
+        $testConnection = new TestConnection();
+        /** @var HeartBeatMessageInterface|MessageComponentInterface $httpAdapter */
+        $httpAdapter = $this->getHttpAdapter(function() {});
+        $httpAdapter->onMessage($testConnection, $message);
+
+        $this->assertFalse($testConnection->isConnectionClosed(), "HTTP 1.1 connection should be left open after request");
+
+        for($i = 0; $i < 5; $i++) {
+            // simulate 5 seconds
+            $httpAdapter->onHeartBeat($testConnection);
+        }
+
+        $this->assertTrue($testConnection->isConnectionClosed(), "HTTP 1.1 connection should be closed after keep-alive timeout");
     }
 
     public function testIfHttp11ConnectionIsClosedWithConnectionHeaderAfterSingleRequest()

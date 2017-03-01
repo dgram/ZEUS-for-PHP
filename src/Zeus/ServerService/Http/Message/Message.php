@@ -424,8 +424,8 @@ class Message implements MessageComponentInterface, HeartBeatMessageInterface
             $callback($this->request, $this->response);
         }
 
+        $this->requestsFinished++;
         if ($this->request->getMetadata('isKeepAliveConnection') && $this->keepAliveCount > 0) {
-            $this->requestsFinished++;
             $this->keepAliveCount--;
             $this->initNewRequest();
             $this->restartKeepAliveTimer();

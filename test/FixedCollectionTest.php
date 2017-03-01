@@ -84,6 +84,7 @@ class FixedCollectionTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals($collection->getSize() - 1, $foundItems);
         $this->assertFalse(isset($regularArray[1]));
+        $this->assertFalse(isset($collection[1]));
     }
 
     public function testItemOffset()
@@ -106,5 +107,28 @@ class FixedCollectionTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals(1, $collection[0]);
         $this->assertEquals(4, $collection[2]);
+    }
+
+    public function testAccessToUnsetIndex()
+    {
+        $collection = new FixedCollection(2);
+
+        $result = $collection[100];
+        $this->assertEquals(null, $result);
+    }
+
+    public function testIteratorOnEmptyCollection()
+    {
+        $collection = new FixedCollection(10);
+
+        $foundItems = 0;
+        $regularArray = [];
+
+        foreach ($collection as $key => $value) {
+            $foundItems++;
+            $regularArray[$key] = $value;
+        }
+
+        $this->assertEquals(0, $foundItems);
     }
 }

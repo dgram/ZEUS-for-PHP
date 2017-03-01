@@ -141,7 +141,11 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
         do {
             $this->values->next();
             $index = $this->values->key();
-        } while ($index < $this->ids->getSize() && is_int($index) && $this->ids[$index] === null);
+
+            if (is_int($index) && isset($this->ids[$index])) {
+                return;
+            }
+        } while ($index < $this->values->getSize());
     }
 
     /**
@@ -153,17 +157,13 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function key()
     {
         $index = $this->values->key();
-
-        if ($this->ids[$index] === null) {
+        if (!is_int($index) || is_null($this->ids[$index])) {
             $this->next();
+
+            $index = $this->values->key();
         }
 
-        $index = $this->values->key();
-        if ($this->ids[$index] === null) {
-            return null;
-        }
-
-        return $this->ids[$index];
+        return !is_null($this->ids[$index]) ? $this->ids[$index] : null;
     }
 
     /**
@@ -175,7 +175,11 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function valid()
     {
-        return $this->values->valid();
+        if (count(array_filter($this->ids->toArray())) === 0) {
+            return false;
+        }
+
+        return $this->values->key() < $this->values->getSize();
     }
 
     /**
