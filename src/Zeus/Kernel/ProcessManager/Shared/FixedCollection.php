@@ -164,7 +164,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
             $index = $this->values->key();
         }
 
-        return (isset($this->ids[$index]) && !is_null($this->ids[$index])) ? $this->ids[$index] : null;
+        return (array_key_exists($index, $this->ids) && !is_null($this->ids[$index])) ? $this->ids[$index] : null;
     }
 
     /**
