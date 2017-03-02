@@ -86,7 +86,7 @@ class SchedulerStatusView
                 case ProcessState::RUNNING:
                     ++$busyChildren;
                     ++$allChildren;
-                    $processStatusChars[$processStatus->getId()] = "W";
+                    $processStatusChars[$processStatus->getId()] = "R";
                     break;
 
                 case ProcessState::EXITING:
@@ -124,7 +124,7 @@ class SchedulerStatusView
 
         $output .= PHP_EOL;
 
-        $output .= "Scoreboard Key:" . PHP_EOL . '"_" Waiting for Task, "W" Currently working, "T" Terminating,' . PHP_EOL;
+        $output .= "Scoreboard Key:" . PHP_EOL . '"_" Waiting for task, "R" Currently running, "T" Terminating,' . PHP_EOL;
         $output .= '"." Open slot with no current process' . PHP_EOL . PHP_EOL;
 
         $lastElement = end($processList);
