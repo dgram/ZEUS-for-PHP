@@ -78,4 +78,20 @@ class ZeusControllerTest extends PHPUnit_Framework_TestCase
             $this->assertGreaterThan(0, strpos($logEntries, $sentence));
         }
     }
+
+    public function testControllerServicesStatus()
+    {
+        $request = new \Zend\Console\Request([
+            __FILE__,
+            'zeus',
+            'status',
+        ]);
+
+        $response = new \Zend\Console\Response();
+        $controller = $this->getController();
+        $controller->dispatch($request, $response);
+
+        $logEntries = file_get_contents(__DIR__ . '/tmp/test.log');
+        $this->assertGreaterThan(0, strpos($logEntries, 'Service zeus_httpd is offline or too busy to respond'));
+    }
 }
