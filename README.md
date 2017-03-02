@@ -263,6 +263,13 @@ ZEUS for PHP is able to report current status of its Server Services to the user
 
 ![ZEUS for PHP process status](docs/images/zeus-console-status.png)
 
+Also, since version 1.2.0, a new set of command line options is available:
+
+```php public/index.php zeus status``` and ```php public/index.php zeus start <service name>```
+
+Which will show the user-friendly Server Service status:
+![Screenshot of ZEUS Service Status in terminal](docs/images/zeus-service-status.png)
+
 ## Creating a custom Server Service
 
 Every _Server Service_ needs to implement ```Zeus\ServerService\ServiceInterface```. 
@@ -357,6 +364,13 @@ The above configuration parameters have been described in the __Process Schedule
 - More features introduced to ZEUS Web Server
 
 # Changelog
+
+## Version 1.2.0
+- [Feature] Added new commandline options `index.php zeus status` and `index.php zeus status <service_name>`
+- [Fix] Fixed Scheduler's `ON_SERVER_START` and `ON_SCHEDULER_START` event triggering inconsistency
+- [Fix] Refactor of `FixedCollection` iterator code for improved HHVM compatibility
+- [Fix] Fixed request counter in ZEUS Web Server
+- [Tests improvements] Improved code coverage
 
 ## Version 1.1.8
 - [Feature] Added MIME type detection to ZEUS Web Server's `StaticFileDispatcher`

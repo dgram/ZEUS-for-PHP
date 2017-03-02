@@ -64,11 +64,22 @@ class ProcessState
     /** @var int */
     protected $tasksPerSecond = 0;
 
+    /**
+     * @return int
+     */
+    public function getNumberOfTasksPerSecond()
+    {
+        return $this->tasksPerSecond;
+    }
+
     /** @var int */
     protected $tasksInThisSecond = 0;
 
     /** @var string */
     protected $serviceName = null;
+
+    /** @var float */
+    protected $cpuUsage = null;
 
     /**
      * TaskStatus constructor.
@@ -79,7 +90,6 @@ class ProcessState
     {
         $this->startTime = microtime(true);
         $this->code = $status;
-        $this->id = getmypid();
         $this->time = $this->startTime;
         $this->serviceName = $serviceName;
     }
@@ -88,13 +98,29 @@ class ProcessState
     {
         return [
             'code' => $this->code,
-            'uid' => $this->id,
-            'requestsFinished' => $this->tasksFinished,
+            'uid' => getmypid(),
+            'requests_finished' => $this->tasksFinished,
             'requestsPerSecond' => $this->tasksPerSecond,
             'time' => $this->time,
-            'serviceName' => $this->serviceName,
-            'cpuUsage' => $this->getCpuUsage()
+            'service_name' => $this->serviceName,
+            'cpu_usage' => $this->getCpuUsage()
         ];
+    }
+
+    /**
+     * @param mixed[] $array
+     * @return static
+     */
+    public static function fromArray($array)
+    {
+        $status = new static($array['service_name'], $array['code']);
+        $status->setTime($array['time']);
+        $status->tasksFinished = $array['requests_finished'];
+        $status->tasksPerSecond = $array['requestsPerSecond'];
+        $status->cpuUsage = $array['cpu_usage'];
+        $status->id = $array['uid'];
+
+        return $status;
     }
 
     /**
@@ -121,7 +147,7 @@ class ProcessState
      */
     public function getId()
     {
-        return $this->id;
+        return $this->id ? $this->id : getmypid();
     }
 
     /**
@@ -242,6 +268,10 @@ class ProcessState
      */
     public function getCpuUsage()
     {
+        if (isset($this->cpuUsage)) {
+            return $this->cpuUsage;
+        }
+
         $uptime = max($this->getUptime(), 0.000000001) * 1e6;
 
         $cpuTime = $this->getCurrentSystemCpuTime() + $this->getCurrentUserCpuTime();
@@ -273,5 +303,17 @@ class ProcessState
     public function getServiceName()
     {
         return $this->serviceName;
+    }
+
+    public static function addUnitsToNumber($value, $precision = 2)
+    {
+        $unit = ["", "K", "M", "G"];
+        $exp = floor(log($value, 1000)) | 0;
+        $division = pow(1000, $exp);
+
+        if (!$division) {
+            return 0;
+        }
+        return round($value / $division, $precision) . $unit[$exp];
     }
 }

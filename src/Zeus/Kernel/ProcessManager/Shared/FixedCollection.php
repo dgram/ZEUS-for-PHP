@@ -1,5 +1,4 @@
 <?php
-
 namespace Zeus\Kernel\ProcessManager\Shared;
 
 class FixedCollection implements \Iterator, \ArrayAccess, \Countable
@@ -12,6 +11,16 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     {
         $this->ids = new \SplFixedArray($arraySize);
         $this->values = new \SplFixedArray($arraySize);
+    }
+
+    /**
+     * @return mixed[]
+     */
+    public function toArray()
+    {
+        $result = array_combine(array_filter($this->ids->toArray()), array_filter($this->values->toArray()));
+
+        return $result;
     }
 
     /**
@@ -32,7 +41,6 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
 
         return $index !== false;
     }
-
     /**
      * Offset to retrieve
      * @link http://php.net/manual/en/arrayaccess.offsetget.php
@@ -52,7 +60,6 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
 
         return $this->values[$index];
     }
-
     /**
      * Offset to set
      * @link http://php.net/manual/en/arrayaccess.offsetset.php
@@ -78,7 +85,6 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
             if ($index === null) {
                 $this->ids[$id] = $offset;
                 $this->values[$id] = $value;
-
                 return;
             }
         }
@@ -106,7 +112,6 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function offsetUnset($offset)
     {
         $index = array_search($offset, $this->ids->toArray(), true);
-
         $this->ids[$index] = null;
         $this->values[$index] = null;
     }
@@ -119,15 +124,13 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function current()
     {
-        if ($this->values->key() === null) {
-            $this->next();
+        if (!$this->values->valid()) {
+            $this->values->next();
         }
 
-        if ($this->values->key() === null) {
-            return null;
+        if ($this->values->valid()) {
+            return $this->values->current();
         }
-
-        return $this->values->current();
     }
 
     /**
@@ -141,7 +144,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
         do {
             $this->values->next();
             $index = $this->values->key();
-        } while ($index < $this->ids->getSize() && is_int($index) && $this->ids[$index] === null);
+        } while ($this->values->valid() && $this->ids[$index] === null);
     }
 
     /**
@@ -153,15 +156,15 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
     public function key()
     {
         $index = $this->values->key();
-
-        if ($this->ids[$index] === null) {
+        if ($this->values->valid() && $this->ids[$index] === null) {
             $this->next();
         }
 
-        $index = $this->values->key();
-        if ($this->ids[$index] === null) {
+        if (!$this->values->valid()) {
             return null;
         }
+
+        $index = $this->values->key();
 
         return $this->ids[$index];
     }
@@ -175,7 +178,7 @@ class FixedCollection implements \Iterator, \ArrayAccess, \Countable
      */
     public function valid()
     {
-        return $this->values->valid();
+        return $this->key() !== null;
     }
 
     /**

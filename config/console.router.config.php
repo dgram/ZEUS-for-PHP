@@ -6,7 +6,7 @@ return [
     'routes' => [
         'zeus-service' => [
             'options' => [
-                'route' => 'zeus (start|list) [<service>]',
+                'route' => 'zeus (start|list|status) [<service>]',
                 'defaults' => [
                     'controller' => ZeusController::class
                 ]

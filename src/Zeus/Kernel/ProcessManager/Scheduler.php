@@ -2,13 +2,13 @@
 
 namespace Zeus\Kernel\ProcessManager;
 
+use Zend\Console\Console;
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zend\Log\LoggerInterface;
 use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
 use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
 use Zeus\Kernel\ProcessManager\Helper\Logger;
-use Zeus\Kernel\ProcessManager\EventsInterface;
 use Zeus\Kernel\ProcessManager\Scheduler\ProcessCollection;
 use Zeus\Kernel\ProcessManager\Status\ProcessState;
 use Zeus\Kernel\IpcServer\Message;
@@ -131,7 +131,7 @@ final class Scheduler
         $this->setLogger($logger);
         $this->setLoggerExtraDetails(['service' => $this->config->getServiceName()]);
 
-        if (!defined('STDIN')) {
+        if (!Console::isConsole()) {
             throw new ProcessManagerException("This application must be launched from the Command Line Interpreter", ProcessManagerException::CLI_MODE_REQUIRED);
         }
 
@@ -153,7 +153,6 @@ final class Scheduler
      */
     protected function attach(EventManagerInterface $events)
     {
-        $events->detach([$this, 'startScheduler']);
         $events->attach(EventsInterface::ON_PROCESS_CREATE, function(EventInterface $e) { $this->addNewProcess($e);}, -10000);
         $events->attach(EventsInterface::ON_PROCESS_INIT, function(EventInterface $e) { $this->onProcessInit($e);});
         $events->attach(EventsInterface::ON_PROCESS_TERMINATED, function(EventInterface $e) { $this->onProcessExit($e);}, -10000);
@@ -235,12 +234,48 @@ final class Scheduler
     }
 
     /**
+     * @return mixed[]
+     */
+    public function getStatus()
+    {
+        $payload = [
+            'isEvent' => false,
+            'type' => Message::IS_STATUS_REQUEST,
+            'priority' => '',
+            'message' => 'fetchStatus',
+            'extra' => [
+                'uid' => $this->getId(),
+                'logger' => __CLASS__
+            ]
+        ];
+
+        $this->ipcAdapter->useChannelNumber(1);
+        $this->ipcAdapter->send($payload);
+
+        $timeout = 5;
+        $result = null;
+        do {
+            $result = $this->ipcAdapter->receive();
+            usleep(1000);
+            $timeout--;
+        } while (!$result && $timeout >= 0);
+
+        $this->ipcAdapter->useChannelNumber(0);
+
+        if ($result) {
+            return $result['extra'];
+        }
+
+        return null;
+    }
+
+    /**
      * @param mixed[] $extraExtraData
      * @return mixed[]
      */
     private function getEventExtraData($extraExtraData = [])
     {
-        $extraExtraData = array_merge($this->status->toArray(), $extraExtraData, ['serviceName' => $this->config->getServiceName()]);
+        $extraExtraData = array_merge($this->status->toArray(), $extraExtraData, ['service_name' => $this->config->getServiceName()]);
         return $extraExtraData;
     }
 
@@ -256,16 +291,23 @@ final class Scheduler
         $this->collectCycles();
 
         $events = $this->getEventManager();
+        $events->attach(EventsInterface::ON_SCHEDULER_START, [$this, 'startScheduler'], 0);
 
         try {
             if (!$launchAsDaemon) {
-                $events->attach(EventsInterface::ON_SERVER_START, [$this, 'startScheduler'], 100000);
                 $this->getEventManager()->trigger(EventsInterface::ON_SERVER_START, $this, $this->getEventExtraData());
+                $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_START, $this, $this->getEventExtraData());
 
                 return $this;
             }
 
-            $events->attach(EventsInterface::ON_PROCESS_INIT, [$this, 'startScheduler'], 100000);
+            $events->attach(EventsInterface::ON_PROCESS_INIT, function(EventInterface $e) {
+                if ($e->getParam('server')) {
+                    $e->stopPropagation(true);
+                    $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_START, $this, $this->getEventExtraData());
+                }
+            }, 100000);
+
             $events->attach(EventsInterface::ON_PROCESS_CREATE,
                 function (EventInterface $event) {
                     $pid = $event->getParam('uid');
@@ -300,8 +342,6 @@ final class Scheduler
 
         $this->attach($this->getEventManager());
 
-        $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_START, $this, $this->getEventExtraData());
-
         $config = $this->getConfig();
 
         if ($config->isProcessCacheEnabled()) {
@@ -309,7 +349,6 @@ final class Scheduler
         }
 
         $this->log(\Zend\Log\Logger::INFO, "Scheduler started");
-        $event->stopPropagation(true);
 
         return $this->mainLoop();
     }
@@ -431,8 +470,6 @@ final class Scheduler
         $this->processTemplate->setEventManager($this->getEventManager());
         $this->processTemplate->setConfig($this->getConfig());
         $this->processTemplate->mainLoop();
-
-        //exit(0);
     }
 
     /**
@@ -445,7 +482,11 @@ final class Scheduler
         $this->processes[$pid] = [
             'code' => ProcessState::WAITING,
             'uid' => $pid,
-            'time' => microtime(true)
+            'time' => microtime(true),
+            'service_name' => $this->config->getServiceName(),
+            'requests_finished' => 0,
+            'requestsPerSecond' => 0,
+            'cpu_usage' => 0,
         ];
     }
 
@@ -561,7 +602,7 @@ final class Scheduler
                     $pid = $details['uid'];
 
                     /** @var ProcessState $processStatus */
-                    $processStatus = $message['message'];
+                    $processStatus = $message['extra']['status'];
                     $processStatus['time'] = $this->getTime();
 
                     if ($processStatus['code'] === ProcessState::RUNNING) {
@@ -575,6 +616,11 @@ final class Scheduler
 
                     break;
 
+                case Message::IS_STATUS_REQUEST:
+                    $this->logger->debug('Status request detected');
+                    $this->sendSchedulerStatus($this->ipcAdapter);
+                    break;
+
                 default:
                     $this->logMessage($message);
                     break;
@@ -582,5 +628,26 @@ final class Scheduler
         }
 
         return $this;
+    }
+
+    private function sendSchedulerStatus(IpcAdapterInterface $ipcAdapter)
+    {
+        $payload = [
+            'isEvent' => false,
+            'type' => Message::IS_STATUS,
+            'priority' => '',
+            'message' => 'statusSent',
+            'extra' => [
+                'uid' => $this->getId(),
+                'logger' => __CLASS__,
+                'process_status' => $this->processes->toArray(),
+                'scheduler_status' => $this->status->toArray(),
+            ]
+        ];
+
+        $payload['extra']['scheduler_status']['total_traffic'] = 0;
+        $payload['extra']['scheduler_status']['start_timestamp'] = $_SERVER['REQUEST_TIME_FLOAT'];
+
+        $ipcAdapter->send($payload);
     }
 }

@@ -67,38 +67,21 @@ class ProcessTitle
 
         list($junk, $taskType, $status) = explode('_', $function, 3);
 
-        if ($event->getParam('cpuUsage') !== null || $event->getParam('requestsFinished') !== null) {
+        if ($event->getParam('cpu_usage') !== null || $event->getParam('requests_finished') !== null) {
             $this->setTitle(sprintf("%s %s [%s] %s req done, %s rps, %d%% CPU usage",
                 $taskType,
-                $event->getParam('serviceName'),
+                $event->getParam('service_name'),
                 $status,
-                $this->addUnitsToNumber($event->getParam('requestsFinished')),
-                $this->addUnitsToNumber($event->getParam('requestsPerSecond')),
-                $event->getParam('cpuUsage')
+                ProcessState::addUnitsToNumber($event->getParam('requests_finished')),
+                ProcessState::addUnitsToNumber($event->getParam('requestsPerSecond')),
+                $event->getParam('cpu_usage')
             ));
         } else {
             $this->setTitle(sprintf("%s %s [%s]",
                 $taskType,
-                $event->getParam('serviceName'),
+                $event->getParam('service_name'),
                 $status
             ));
         }
-    }
-
-    /**
-     * @param $value
-     * @param int $precision
-     * @return string
-     */
-    private function addUnitsToNumber($value, $precision = 2)
-    {
-        $unit = ["", "K", "M", "G"];
-        $exp = floor(log($value, 1000)) | 0;
-        $division = pow(1000, $exp);
-
-        if (!$division) {
-            return 0;
-        }
-        return round($value / $division, $precision) . $unit[$exp];
     }
 }

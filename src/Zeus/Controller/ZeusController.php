@@ -7,6 +7,7 @@ use Zend\Mvc\Controller\AbstractActionController;
 use Zend\Stdlib\RequestInterface;
 use Zend\Stdlib\ResponseInterface;
 use Zend\Log\Writer;
+use Zeus\Kernel\ProcessManager\Status\SchedulerStatusView;
 use Zeus\ServerService\Manager;
 use Zend\Console\Request as ConsoleRequest;
 use Zeus\ServerService\ServerServiceInterface;
@@ -70,6 +71,10 @@ class ZeusController extends AbstractActionController
                 case 'list':
                     $this->listServices($serviceName);
                     break;
+
+                case 'status':
+                    $this->getStatus($serviceName);
+                    break;
             }
         } catch (\Exception $exception) {
             $this->logger->err(sprintf("Exception (%d): %s in %s on line %d",
@@ -79,6 +84,29 @@ class ZeusController extends AbstractActionController
                 $exception->getLine()
             ));
             $this->logger->debug(sprintf("Stack Trace:\n%s", $exception->getTraceAsString()));
+        }
+    }
+
+    /**
+     * @param string $serviceName
+     */
+    protected function getStatus($serviceName)
+    {
+        if ($serviceName) {
+            $services = [$serviceName => $this->manager->getService($serviceName)];
+        } else {
+            $services = $this->manager->getServices(false);
+        }
+
+        foreach ($services as $serviceName => $service) {
+            $schedulerStatus = new SchedulerStatusView($service->getScheduler());
+            $status = $schedulerStatus->getStatus();
+
+            if (!$status) {
+                $this->logger->err("Service $serviceName is offline or too busy to respond");
+            } else {
+                $this->logger->info($status);
+            }
         }
     }
 
@@ -105,7 +133,7 @@ class ZeusController extends AbstractActionController
         if ($output) {
             $this->logger->info('Configuration details:' . $output);
         } else {
-            $this->logger->warn('No Server Service found');
+            $this->logger->err('No Server Service found');
         }
     }
 
@@ -139,7 +167,7 @@ class ZeusController extends AbstractActionController
                 sleep(1);
             }
         } else {
-            $this->logger->warn('No Server Service found');
+            $this->logger->err('No Server Service found');
         }
     }
 

@@ -14,6 +14,7 @@ use Zeus\Kernel\ProcessManager\Factory\SchedulerFactory;
 use Zeus\Kernel\ProcessManager\Process;
 use Zeus\Kernel\ProcessManager\Scheduler;
 use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\ServerService\Shared\Factory\AbstractServerServiceFactory;
 use Zeus\ServerService\Shared\Logger\IpcLogWriter;
 
 trait ZeusFactories
@@ -25,6 +26,7 @@ trait ZeusFactories
     {
         $sm = new ServiceManager();
         $sm->addAbstractFactory(IpcAdapterAbstractFactory::class);
+        $sm->addAbstractFactory(AbstractServerServiceFactory::class);
         $sm->setFactory(Scheduler::class, SchedulerFactory::class);
         $sm->setFactory(Process::class, ProcessFactory::class);
         $sm->setFactory(IpcAdapterInterface::class, IpcServerFactory::class);
@@ -56,10 +58,11 @@ trait ZeusFactories
     }
 
     /**
-     * @param int $mainLoopIterantions
+     * @param int $mainLoopIterations
+     * @param callback $loopCallback
      * @return Scheduler
      */
-    public function getScheduler($mainLoopIterantions = 0)
+    public function getScheduler($mainLoopIterations = 0, $loopCallback = null)
     {
         $sm = $this->getServiceManager();
 
@@ -77,14 +80,18 @@ trait ZeusFactories
             'main_logger_adapter' => $logger,
         ]);
 
-        if ($mainLoopIterantions > 0) {
+        if ($mainLoopIterations > 0) {
             $events = $scheduler->getEventManager();
-            $events->attach(EventsInterface::ON_SCHEDULER_LOOP, function (EventInterface $e) use (&$mainLoopIterantions) {
+            $events->attach(EventsInterface::ON_SCHEDULER_LOOP, function (EventInterface $e) use (&$mainLoopIterations, $loopCallback) {
 
-                $mainLoopIterantions--;
+                $mainLoopIterations--;
 
-                if ($mainLoopIterantions === 0) {
+                if ($mainLoopIterations === 0) {
                     $e->getTarget()->setContinueMainLoop(false);
+                }
+
+                if ($loopCallback) {
+                    $loopCallback($e->getTarget());
                 }
             });
         }
