@@ -72,7 +72,7 @@ class LoggerFactory implements FactoryInterface
         $loggerWrapper->addProcessor($logProcessor);
 
         if (!$isCustomLogger) {
-            if ($config['zeus_process_manager']['logger']['output'] === 'php://stdout') {
+            if ($output === 'php://stdout') {
                 $formatter = new ConsoleLogFormatter(Console::getInstance());
             } else {
                 $formatter = new StreamLogFormatter();

@@ -79,6 +79,23 @@ class ZeusControllerTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    public function testControllerServicesListForIncorrectService()
+    {
+        $request = new \Zend\Console\Request([
+            __FILE__,
+            'zeus',
+            'list',
+            'dummy_service'
+        ]);
+
+        $response = new \Zend\Console\Response();
+        $controller = $this->getController();
+        $controller->dispatch($request, $response);
+
+        $logEntries = file_get_contents(__DIR__ . '/tmp/test.log');
+        $this->assertGreaterThan(0, strpos($logEntries, 'Exception (0): Service "dummy_service" not found'));
+    }
+
     public function testControllerServicesStatus()
     {
         $request = new \Zend\Console\Request([
@@ -92,6 +109,6 @@ class ZeusControllerTest extends PHPUnit_Framework_TestCase
         $controller->dispatch($request, $response);
 
         $logEntries = file_get_contents(__DIR__ . '/tmp/test.log');
-        $this->assertGreaterThan(0, strpos($logEntries, 'Service zeus_httpd is offline or too busy to respond'));
+        $this->assertGreaterThan(0, strpos($logEntries, 'Service "zeus_httpd" is offline or too busy to respond'));
     }
 }
