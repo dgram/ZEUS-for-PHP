@@ -219,7 +219,7 @@ final class Process
 
         // send new status to Scheduler only if it changed
         if ($oldStatus !== $statusCode) {
-            $this->sendMessage(Message::IS_STATUS, $this->status->toArray());
+            $this->sendMessage(Message::IS_STATUS, 'statusSent');
         }
 
         return $this;
