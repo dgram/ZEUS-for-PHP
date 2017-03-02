@@ -363,7 +363,10 @@ The above configuration parameters have been described in the __Process Schedule
 - Redis Server Service implementation PoC
 - More features introduced to ZEUS Web Server
 
-# Changelog
+# Chan
+
+## Version 1.2.1
+- [Fix] Renamed status names reported by a Service Status command to be inline with those reported by Proces Title functionality
 
 ## Version 1.2.0
 - [Feature] Added new commandline options `index.php zeus status` and `index.php zeus status <service_name>`
