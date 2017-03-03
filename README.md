@@ -365,6 +365,11 @@ The above configuration parameters have been described in the __Process Schedule
 
 # Changelog
 
+## Version 1.2.2
+- [Feature] Added `StreamLogFormatter` and basic strategy that chooses between `StreamLogFormatter` and `ConsoleLogFormatter` depending on stream type.
+- [Fix] Added `zendframework-zend-console` as required Composer package
+- [Tests improvements] Improved code coverage
+
 ## Version 1.2.1
 - [Fix] Renamed status names reported by a Service Status command to be inline with those reported by Proces Title functionality
 
