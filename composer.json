@@ -20,6 +20,7 @@
     "ext-posix": "*",
     "zendframework/zend-mvc": "^3.0.1",
     "zendframework/zend-console": "^2.6",
+    "zendframework/zend-config": "^2.6",
     "zendframework/zend-mvc-console": "^1.1",
     "react/react": "^0.4.2",
     "zendframework/zend-log": "^2.9"
