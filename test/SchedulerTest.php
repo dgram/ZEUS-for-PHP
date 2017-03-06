@@ -13,6 +13,7 @@ use Zend\ServiceManager\ServiceManager;
 use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
 use Zeus\Kernel\ProcessManager\Scheduler;
 use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\ServerService\Shared\Logger\ConsoleLogFormatter;
 use ZeusTest\Helpers\ZeusFactories;
 
 class SchedulerTest extends PHPUnit_Framework_TestCase
@@ -217,6 +218,7 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
         $mockWriter = new Mock();
         $scheduler->setLogger($logger);
         $scheduler->getLogger()->addWriter($mockWriter);
+        $mockWriter->setFormatter(new ConsoleLogFormatter(Console::getInstance()));
         $scheduler->startScheduler(new Event());
 
         $this->assertEquals(8, $amountOfScheduledProcesses, "Scheduler should try to create 8 processes on its startup");
