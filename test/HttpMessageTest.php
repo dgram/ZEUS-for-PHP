@@ -41,6 +41,7 @@ class HttpMessageTest extends PHPUnit_Framework_TestCase
             }
         }
 
+        rmdir(__DIR__ . '/tmp');
         parent::tearDown();
     }
 
