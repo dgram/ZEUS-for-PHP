@@ -2,12 +2,14 @@
 
 namespace ZeusTest\Helpers;
 
+use ReflectionProperty;
 use Zend\EventManager\EventInterface;
 use Zend\Log\Logger;
 use Zend\ModuleManager\ModuleManager;
 use Zend\Mvc\Service\EventManagerFactory;
 use Zend\Mvc\Service\ModuleManagerFactory;
 use Zend\Mvc\Service\ServiceListenerFactory;
+use Zend\Mvc\Service\ServiceManagerConfig;
 use Zend\ServiceManager\ServiceManager;
 use Zend\Stdlib\ArrayUtils;
 use Zeus\Controller\Factory\ZeusControllerFactory;
@@ -24,9 +26,14 @@ use Zeus\Kernel\ProcessManager\EventsInterface;
 use Zeus\ServerService\Manager;
 use Zeus\ServerService\Shared\Factory\AbstractServerServiceFactory;
 use Zeus\ServerService\Shared\Logger\IpcLogWriter;
+use Zend\Router;
 
 trait ZeusFactories
 {
+    public function getApplication()
+    {
+
+    }
     /**
      * @return ServiceManager
      */
@@ -44,18 +51,50 @@ trait ZeusFactories
         $sm->setFactory('ServiceListener', ServiceListenerFactory::class);
         $sm->setFactory('EventManager', EventManagerFactory::class);
         $sm->setFactory('ModuleManager', ModuleManagerFactory::class);
-        $sm->setService('ApplicationConfig', [
-            'modules' => [
-            ],
-            'module_listener_options' => [
-                'config_glob_paths' => [realpath(__DIR__) . '/autoload/{,*.}{global,local}-development.php'],
-                'config_cache_enabled' => false,
-                'module_map_cache_enabled' => false,
-            ]
-        ]);
-        $config = require realpath(__DIR__ . "/../../config/module.config.php");
 
-        $config = ArrayUtils::merge($config,
+        $serviceListener = new ServiceListenerFactory();
+        $r = new ReflectionProperty($serviceListener, 'defaultServiceConfig');
+        $r->setAccessible(true);
+        $serviceConfig = $r->getValue($serviceListener);
+        $serviceConfig = ArrayUtils::merge(
+            $serviceConfig,
+            (new Router\ConfigProvider())->getDependencyConfig()
+        );
+        $serviceConfig = ArrayUtils::merge(
+            $serviceConfig,
+            [
+                'invokables' => [
+                    'Request'              => 'Zend\Http\PhpEnvironment\Request',
+                    'Response'             => 'Zend\Http\PhpEnvironment\Response',
+                    'ViewManager'          => 'ZendTest\Mvc\TestAsset\MockViewManager',
+                    'SendResponseListener' => 'ZendTest\Mvc\TestAsset\MockSendResponseListener',
+                    'BootstrapListener'    => 'ZendTest\Mvc\TestAsset\StubBootstrapListener',
+                ],
+                'factories' => [
+                    'Router' => Router\RouterFactory::class,
+                ],
+                'services' => [
+                    'config' => [],
+                    'ApplicationConfig' => [
+                        'modules' => [
+                            'Zend\Router',
+                            'Zeus',
+                        ],
+                        'module_listener_options' => [
+                            'config_cache_enabled' => false,
+                            'cache_dir'            => 'data/cache',
+                            'module_paths'         => [],
+                        ],
+                    ],
+                ],
+            ]
+        );
+
+        $moduleConfig = require realpath(__DIR__ . "/../../config/module.config.php");
+
+        $serviceConfig = ArrayUtils::merge($serviceConfig, $moduleConfig);
+
+        $serviceConfig = ArrayUtils::merge($serviceConfig,
             [
                 'zeus_process_manager' => [
                     'logger' => [
@@ -77,7 +116,9 @@ trait ZeusFactories
             ]
         );
 
-        $sm->setService('configuration', $config);
+        (new ServiceManagerConfig($serviceConfig))->configureServiceManager($sm);
+
+        $sm->setService('configuration', $serviceConfig);
 
         return $sm;
     }

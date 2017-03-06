@@ -10,11 +10,10 @@ use Zend\Log\Logger;
 use Zend\Log\Writer\Mock;
 use Zend\ServiceManager\Exception\ServiceNotCreatedException;
 use Zend\ServiceManager\ServiceManager;
-use Zend\Stdlib\SplPriorityQueue;
-use Zend\Stdlib\SplQueue;
 use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
 use Zeus\Kernel\ProcessManager\Scheduler;
 use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\ServerService\Shared\Logger\ConsoleLogFormatter;
 use ZeusTest\Helpers\ZeusFactories;
 
 class SchedulerTest extends PHPUnit_Framework_TestCase
@@ -219,6 +218,7 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
         $mockWriter = new Mock();
         $scheduler->setLogger($logger);
         $scheduler->getLogger()->addWriter($mockWriter);
+        $mockWriter->setFormatter(new ConsoleLogFormatter(Console::getInstance()));
         $scheduler->startScheduler(new Event());
 
         $this->assertEquals(8, $amountOfScheduledProcesses, "Scheduler should try to create 8 processes on its startup");
@@ -232,5 +232,66 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
         }
 
         $this->assertEquals(8, count($foundExceptions), "Logger should have reported 8 errors");
+    }
+
+    public function testProcessShutdownSequence()
+    {
+        $scheduler = $this->getScheduler(1);
+
+        $amountOfScheduledProcesses = 0;
+        $processesCreated = [];
+
+        $em = $scheduler->getEventManager();
+        $em->attach(EventsInterface::ON_PROCESS_EXIT, function(EventInterface $e) {$e->stopPropagation(true);});
+        $em->attach(EventsInterface::ON_PROCESS_CREATE,
+            function(EventInterface $e) use (&$amountOfScheduledProcesses, &$processesCreated, $em) {
+                $amountOfScheduledProcesses++;
+
+                $uid = 100000000 + $amountOfScheduledProcesses;
+                $processesCreated[$uid] = true;
+                $em->trigger(EventsInterface::ON_PROCESS_CREATED, null, ['uid' => $uid]);
+            }
+        );
+        $em->attach(EventsInterface::ON_PROCESS_LOOP,
+            function(EventInterface $e) {
+                // stop the process
+                $e->getTarget()->getStatus()->incrementNumberOfFinishedTasks(100);
+            }
+        );
+
+        $schedulerStopped = false;
+        $em->attach(EventsInterface::ON_SCHEDULER_STOP,
+            function(EventInterface $e) use (&$schedulerStopped) {
+                $schedulerStopped = true;
+                $e->stopPropagation(true);
+            }, -9999);
+
+        $unknownProcesses = [];
+        $em->attach(EventsInterface::ON_PROCESS_TERMINATE,
+            function(EventInterface $e) use ($em) {
+                $uid = $e->getParam('uid');
+                $em->trigger(EventsInterface::ON_PROCESS_TERMINATED, null, ['uid' => $uid]);
+            }
+        );
+
+        $em->attach(EventsInterface::ON_PROCESS_TERMINATED,
+            function(EventInterface $e) use (&$unknownProcesses, &$processesCreated, $em) {
+                $uid = $e->getParam('uid');
+                if (!isset($processesCreated[$uid])) {
+                    $unknownProcesses[] = true;
+                } else {
+                    unset($processesCreated[$uid]);
+                }
+            }
+        );
+
+        $scheduler->startScheduler(new Event());
+
+        $this->assertEquals(8, $amountOfScheduledProcesses, "Scheduler should try to create 8 processes on its startup");
+
+        $scheduler->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_STOP, null);
+
+        $this->assertEquals(0, count($processesCreated), 'All processes should have been planned to be terminated on scheduler shutdown');
+        $this->assertEquals(0, count($unknownProcesses), 'No unknown processes should have been terminated');
     }
 }

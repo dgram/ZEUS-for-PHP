@@ -14,6 +14,16 @@ use Zeus\ServerService\Http\ZendFramework\ApplicationProxy;
 
 class ZendFrameworkDispatcher implements DispatcherInterface
 {
+    protected static $applicationConfig;
+
+    /**
+     * @param mixed[] $config
+     */
+    public static function setApplicationConfig($config)
+    {
+        static::$applicationConfig = $config;
+    }
+
     /**
      * ZendFrameworkDispatcher constructor.
      * @param mixed[] $config
@@ -31,10 +41,9 @@ class ZendFrameworkDispatcher implements DispatcherInterface
      */
     protected function getApplicationConfig()
     {
-        static $appConfig;
+        $appConfig = static::$applicationConfig;
 
         if (!$appConfig) {
-
             $appConfig = include 'config/application.config.php';
 
             if (file_exists('config/development.config.php')) {
@@ -56,6 +65,8 @@ class ZendFrameworkDispatcher implements DispatcherInterface
                     $appConfig['module_listener_options']['config_glob_paths'][$index] = getcwd() . '/' . $path;
                 }
             }
+
+            static::setApplicationConfig($appConfig);
         }
 
         return $appConfig;
@@ -87,6 +98,7 @@ class ZendFrameworkDispatcher implements DispatcherInterface
         // Run the application!
         Console::overrideIsConsole(false);
 
+        $config = Module::getOverrideConfig();
         $config['service_manager']['factories']['Request'] = RequestFactory::class;
         //$app = Application::init($this->getApplicationConfig());
         $config['zeus_process_manager']['services']['Request'] = $httpRequest;

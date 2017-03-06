@@ -18,6 +18,7 @@
   "require": {
     "php": "^5.6 || ^7.0",
     "ext-posix": "*",
+    "ext-pcntl": "*",
     "zendframework/zend-mvc": "^3.0.1",
     "zendframework/zend-console": "^2.6",
     "zendframework/zend-config": "^2.6",

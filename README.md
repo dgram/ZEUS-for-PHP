@@ -365,9 +365,16 @@ The above configuration parameters have been described in the __Process Schedule
 
 # Changelog
 
+## Version 1.2.3
+- [Feature] Introduced `ON_PROCESS_CREATED` event to `Scheduler`
+- [Feature] Now its possible to intercept `ON_SCHEDULER_STOP` event before `exit()`
+- [Fix] Fixed various `ON_SCHEDULER_STOP` event triggering inconsistencies
+- [Fix] Added `ext-pcntl` to Composer as required PHP extension
+- [Tests improvements] Improved code coverage + dead code removed
+
 ## Version 1.2.2
 - [Feature] Added `StreamLogFormatter` and basic strategy that chooses between `StreamLogFormatter` and `ConsoleLogFormatter` depending on stream type.
-- [Fix] Added `zendframework-zend-console` as required Composer package
+- [Fix] Added `zendframework/zend-console` as required Composer package
 - [Tests improvements] Improved code coverage
 
 ## Version 1.2.1

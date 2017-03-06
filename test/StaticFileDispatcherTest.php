@@ -45,6 +45,7 @@ class StaticFileDispatcherTest extends PHPUnit_Framework_TestCase
         unlink("tmp/test.xml");
         unlink("tmp/test_xml");
         unlink("tmp/test.json");
+        rmdir("tmp");
     }
 
     public function testMimeTypeDetector()
