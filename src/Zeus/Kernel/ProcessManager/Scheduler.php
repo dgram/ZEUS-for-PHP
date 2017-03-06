@@ -153,13 +153,19 @@ final class Scheduler
      */
     protected function attach(EventManagerInterface $events)
     {
-        $events->attach(EventsInterface::ON_PROCESS_CREATE, function(EventInterface $e) { $this->addNewProcess($e);}, -10000);
+        $events->attach(EventsInterface::ON_PROCESS_CREATED, function(EventInterface $e) { $this->addNewProcess($e);}, -10000);
         $events->attach(EventsInterface::ON_PROCESS_INIT, function(EventInterface $e) { $this->onProcessInit($e);});
         $events->attach(EventsInterface::ON_PROCESS_TERMINATED, function(EventInterface $e) { $this->onProcessExit($e);}, -10000);
-        $events->attach(EventsInterface::ON_PROCESS_TERMINATE, function(EventInterface $e) { $this->onProcessExit($e);}, -10000);
         $events->attach(EventsInterface::ON_PROCESS_EXIT, function(EventInterface $e) { exit();}, -10000);
         $events->attach(EventsInterface::ON_PROCESS_MESSAGE, function(EventInterface $e) { $this->onProcessMessage($e);});
-        $events->attach(EventsInterface::ON_SERVER_STOP, function(EventInterface $e) { $this->onShutdown($e);});
+        $events->attach(EventsInterface::ON_SCHEDULER_STOP, function(EventInterface $e) { $this->onShutdown($e);});
+        $events->attach(EventsInterface::ON_SCHEDULER_STOP, function(EventInterface $e) {
+            /** @var \Exception $exception */
+            $exception = $e->getParam('exception');
+
+            $status = $exception ? $exception->getCode(): 0;
+            exit($status);
+        }, -10000);
 
         $events->attach(EventsInterface::ON_SCHEDULER_LOOP, function(EventInterface $e) {
             $this->collectCycles();
@@ -168,14 +174,6 @@ final class Scheduler
         });
 
         return $this;
-    }
-
-    /**
-     * @param EventInterface $event
-     */
-    protected function onShutdown(EventInterface $event)
-    {
-        $this->shutdown();
     }
 
     /**
@@ -192,8 +190,8 @@ final class Scheduler
     protected function onProcessExit(EventInterface $event)
     {
         if ($event->getParam('uid') === $this->getId()) {
-            $this->shutdown();
-
+            $this->log(\Zend\Log\Logger::DEBUG, "Scheduler is exiting...");
+            $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_STOP, $this, $this->getEventExtraData());
             return;
         }
 
@@ -322,9 +320,9 @@ final class Scheduler
             $this->getEventManager()->trigger(EventsInterface::ON_PROCESS_CREATE, $this, $this->getEventExtraData(['server' => true]));
             $this->getEventManager()->trigger(EventsInterface::ON_SERVER_START, $this, $this->getEventExtraData());
         } catch (\Throwable $e) {
-            $this->shutdown($e);
+            $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_STOP, $this, $this->getEventExtraData(['exception' => $e]));
         } catch (\Exception $e) {
-            $this->shutdown($e);
+            $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_STOP, $this, $this->getEventExtraData(['exception' => $e]));
         }
 
         return $this;
@@ -396,12 +394,13 @@ final class Scheduler
     /**
      * Shutdowns the server
      *
-     * @param \Exception|\Throwable $exception
+     * @param EventInterface $event
      * @return $this
      */
-    protected function shutdown($exception = null)
+    protected function onShutdown(EventInterface $event)
     {
-        $status = 0;
+        $exception = $event->getParam('exception', null);
+
         $this->setContinueMainLoop(false);
 
         $this->log(\Zend\Log\Logger::INFO, "Terminating scheduler");
@@ -425,11 +424,8 @@ final class Scheduler
         }
 
         $this->log(\Zend\Log\Logger::INFO, "Terminated scheduler with $processes processes");
-        $this->getEventManager()->trigger(EventsInterface::ON_SCHEDULER_STOP, $this, $this->getEventExtraData(['exception' => $exception]));
 
         $this->ipcAdapter->disconnect();
-
-        exit($status);
     }
 
     /**

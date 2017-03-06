@@ -37,7 +37,7 @@ final class PosixProcess implements MultiProcessingModuleInterface
         $events->attach(EventsInterface::ON_PROCESS_RUNNING, [$this, 'sigBlock']);
         $events->attach(EventsInterface::ON_SERVER_START, [$this, 'onServerInit']);
         $events->attach(EventsInterface::ON_SCHEDULER_START, [$this, 'onSchedulerInit']);
-        $events->attach(EventsInterface::ON_SCHEDULER_STOP, [$this, 'shutdownServer']);
+        $events->attach(EventsInterface::ON_SCHEDULER_STOP, [$this, 'shutdownServer'], -9999);
         $events->attach(EventsInterface::ON_SCHEDULER_LOOP, [$this, 'processSignals']);
 
         $this->events = $events;
@@ -105,22 +105,9 @@ final class PosixProcess implements MultiProcessingModuleInterface
         posix_setsid();
     }
 
-    public function onSchedulerInit()
-    {
-        $onTaskTerminate = [$this, 'onSchedulerTerminate'];
-        //pcntl_sigprocmask(SIG_BLOCK, [SIGCHLD]);
-        pcntl_signal(SIGTERM, $onTaskTerminate);
-        pcntl_signal(SIGQUIT, $onTaskTerminate);
-        pcntl_signal(SIGTSTP, $onTaskTerminate);
-        pcntl_signal(SIGINT, $onTaskTerminate);
-        pcntl_signal(SIGHUP, $onTaskTerminate);
-    }
-
     public function onSchedulerTerminate()
     {
-        $this->events->trigger(EventsInterface::ON_SERVER_STOP, null, ['uid' => getmypid()]);
-
-        exit();
+        $this->events->trigger(EventsInterface::ON_SCHEDULER_STOP, null, ['uid' => getmypid()]);
     }
 
     public function sigBlock()
@@ -142,20 +129,15 @@ final class PosixProcess implements MultiProcessingModuleInterface
     public function processSignals()
     {
         // catch other potential signals to avoid race conditions
-        //while (($signal = \pcntl_sigtimedwait([SIGCHLD], $signalInfo, 0, 100)) > 0) {
         while (($pid = pcntl_wait($pcntlStatus, WNOHANG|WUNTRACED)) > 0) {
-            if (pcntl_wifexited($pcntlStatus)) {
-                $this->events->trigger(EventsInterface::ON_PROCESS_TERMINATED, null, ['uid' => $pid]);
-            }
+            $eventType = $pid === getmypid() ? EventsInterface::ON_SCHEDULER_STOP : EventsInterface::ON_PROCESS_TERMINATED;
+            $this->events->trigger($eventType, null, ['uid' => $pid]);
         }
-        //}
 
         $this->sigDispatch();
 
         if ($this->ppid !== posix_getppid()) {
-            $this->events->trigger(EventsInterface::ON_SERVER_STOP, null, ['uid' => $this->ppid]);
-
-            exit();
+            $this->events->trigger(EventsInterface::ON_SCHEDULER_STOP, null, ['uid' => $this->ppid]);
         }
     }
 
@@ -192,6 +174,17 @@ final class PosixProcess implements MultiProcessingModuleInterface
         $this->events->trigger(EventsInterface::ON_PROCESS_INIT, null, $event->getParams());
 
         return $this;
+    }
+
+    public function onSchedulerInit()
+    {
+        $onTaskTerminate = function() { $this->onSchedulerTerminate(); };
+        //pcntl_sigprocmask(SIG_BLOCK, [SIGCHLD]);
+        pcntl_signal(SIGTERM, $onTaskTerminate);
+        pcntl_signal(SIGQUIT, $onTaskTerminate);
+        pcntl_signal(SIGTSTP, $onTaskTerminate);
+        pcntl_signal(SIGINT, $onTaskTerminate);
+        pcntl_signal(SIGHUP, $onTaskTerminate);
     }
 
     /**
