@@ -3,10 +3,15 @@
 namespace ZeusTest;
 
 use PHPUnit_Framework_TestCase;
+use Zend\Console\Console;
 use Zend\Http\Request;
 use Zend\Http\Response;
+use Zend\Log\Logger;
+use Zend\Log\Writer\Stream;
 use Zeus\Controller\ZeusController;
 use Zeus\Kernel\ProcessManager\MultiProcessingModule\PosixProcess;
+use Zeus\ServerService\Shared\Logger\ConsoleLogFormatter;
+use Zeus\ServerService\Shared\Logger\ExtraLogProcessor;
 use Zeus\ServerService\Shared\Logger\LoggerFactory;
 use Zeus\ServerService\Shared\Logger\LoggerInterface;
 use ZeusTest\Helpers\DummyServiceFactory;
@@ -25,9 +30,7 @@ class ZeusControllerTest extends PHPUnit_Framework_TestCase
 
     public function tearDown()
     {
-        if (file_exists(__DIR__ . '/tmp/test.log')) {
-            unlink(__DIR__ . '/tmp/test.log');
-        }
+        unlink(__DIR__ . '/tmp/test.log');
         rmdir(__DIR__ . '/tmp');
     }
 
@@ -69,8 +72,15 @@ class ZeusControllerTest extends PHPUnit_Framework_TestCase
             'list',
         ]);
 
+        $logger = new Logger();
+        $writer = new Stream(__DIR__ . '/tmp/test.log');
+        $formatter = new ConsoleLogFormatter(Console::getInstance());
+        $writer->setFormatter($formatter);
+        $logger->addProcessor(new ExtraLogProcessor());
+        $logger->addWriter($writer);
         $response = new \Zend\Console\Response();
         $controller = $this->getController();
+        $controller->setLogger($logger);
         $controller->dispatch($request, $response);
 
         $logEntries = file_get_contents(__DIR__ . '/tmp/test.log');
