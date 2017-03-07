@@ -405,7 +405,7 @@ The above configuration parameters have been described in the __Process Schedule
 - [Fix] Fixed permissions of some PHP files
 
 ## Version 1.1.5
-- [Feature] New event `Zeus\Kernel\ProcessManager\EventsInterface::ON_PROCESS_EXIT` introduced
+- [Feature] New event `Zeus\Kernel\ProcessManager\SchedulerEvent::PROCESS_EXIT` introduced
 - [Feature] Improved console help
 - [Unclassified] Dead code removal, README tweaks
 - [Tests improvements] More `Scheduler` tests added

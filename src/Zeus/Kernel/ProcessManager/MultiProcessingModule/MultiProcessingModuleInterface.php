@@ -6,8 +6,6 @@ use Zend\EventManager\EventManagerInterface;
 
 interface MultiProcessingModuleInterface
 {
-    public function __construct();
-
     /**
      * @param EventManagerInterface $events
      * @return mixed

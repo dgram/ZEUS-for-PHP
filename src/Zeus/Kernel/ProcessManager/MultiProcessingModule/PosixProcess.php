@@ -6,6 +6,7 @@ use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
 use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\Kernel\ProcessManager\SchedulerEvent;
 
 final class PosixProcess implements MultiProcessingModuleInterface
 {
@@ -15,11 +16,19 @@ final class PosixProcess implements MultiProcessingModuleInterface
     /** @var int Parent PID */
     public $ppid;
 
+    /** @var SchedulerEvent */
+    protected $schedulerEvent;
+
+    /** @var SchedulerEvent */
+    protected $processEvent;
+
     /**
      * PosixDriver constructor.
      */
-    public function __construct()
+    public function __construct($schedulerEvent, $processEvent)
     {
+        $this->schedulerEvent = $schedulerEvent;
+        $this->processEvent = $processEvent;
         $this->checkSetup();
         $this->ppid = getmypid();
     }
@@ -30,15 +39,15 @@ final class PosixProcess implements MultiProcessingModuleInterface
      */
     public function attach(EventManagerInterface $events)
     {
-        $events->attach(EventsInterface::ON_PROCESS_CREATE, [$this, 'startTask']);
-        $events->attach(EventsInterface::ON_PROCESS_IDLING, [$this, 'sigUnblock']);
-        $events->attach(EventsInterface::ON_PROCESS_TERMINATE, [$this, 'onProcessTerminate']);
-        $events->attach(EventsInterface::ON_PROCESS_LOOP, [$this, 'sigDispatch']);
-        $events->attach(EventsInterface::ON_PROCESS_RUNNING, [$this, 'sigBlock']);
-        $events->attach(EventsInterface::ON_SERVER_START, [$this, 'onServerInit']);
-        $events->attach(EventsInterface::ON_SCHEDULER_START, [$this, 'onSchedulerInit']);
-        $events->attach(EventsInterface::ON_SCHEDULER_STOP, [$this, 'shutdownServer'], -9999);
-        $events->attach(EventsInterface::ON_SCHEDULER_LOOP, [$this, 'processSignals']);
+        $events->attach(SchedulerEvent::PROCESS_CREATE, [$this, 'startTask']);
+        $events->attach(SchedulerEvent::PROCESS_WAITING, [$this, 'sigUnblock']);
+        $events->attach(SchedulerEvent::PROCESS_TERMINATE, [$this, 'onProcessTerminate']);
+        $events->attach(SchedulerEvent::PROCESS_LOOP, [$this, 'sigDispatch']);
+        $events->attach(SchedulerEvent::PROCESS_RUNNING, [$this, 'sigBlock']);
+        $events->attach(SchedulerEvent::SERVER_START, [$this, 'onServerInit']);
+        $events->attach(SchedulerEvent::SCHEDULER_START, [$this, 'onSchedulerInit']);
+        $events->attach(SchedulerEvent::SCHEDULER_STOP, [$this, 'shutdownServer'], -9999);
+        $events->attach(SchedulerEvent::SCHEDULER_LOOP, [$this, 'processSignals']);
 
         $this->events = $events;
 
@@ -107,7 +116,7 @@ final class PosixProcess implements MultiProcessingModuleInterface
 
     public function onSchedulerTerminate()
     {
-        $this->events->trigger(EventsInterface::ON_SCHEDULER_STOP, null, ['uid' => getmypid()]);
+        $this->events->trigger(SchedulerEvent::SCHEDULER_STOP, null, ['uid' => getmypid()]);
     }
 
     public function sigBlock()
@@ -130,14 +139,14 @@ final class PosixProcess implements MultiProcessingModuleInterface
     {
         // catch other potential signals to avoid race conditions
         while (($pid = pcntl_wait($pcntlStatus, WNOHANG|WUNTRACED)) > 0) {
-            $eventType = $pid === getmypid() ? EventsInterface::ON_SCHEDULER_STOP : EventsInterface::ON_PROCESS_TERMINATED;
+            $eventType = $pid === getmypid() ? SchedulerEvent::SCHEDULER_STOP : SchedulerEvent::PROCESS_TERMINATED;
             $this->events->trigger($eventType, null, ['uid' => $pid]);
         }
 
         $this->sigDispatch();
 
         if ($this->ppid !== posix_getppid()) {
-            $this->events->trigger(EventsInterface::ON_SCHEDULER_STOP, null, ['uid' => $this->ppid]);
+            $this->events->trigger(SchedulerEvent::SCHEDULER_STOP, null, ['uid' => $this->ppid]);
         }
     }
 
@@ -156,7 +165,7 @@ final class PosixProcess implements MultiProcessingModuleInterface
         } else if ($pid) {
             // we are the parent
             $event->setParam('uid', $pid);
-            $this->events->trigger(EventsInterface::ON_PROCESS_CREATED, null, ['uid' => $pid]);
+            $this->events->trigger(SchedulerEvent::PROCESS_CREATED, null, ['uid' => $pid, 'server' => $event->getParam('server')]);
 
             return $this;
         } else {
@@ -171,7 +180,10 @@ final class PosixProcess implements MultiProcessingModuleInterface
         pcntl_signal(SIGTSTP, SIG_DFL);
 
         $event->setParam('uid', $pid);
-        $this->events->trigger(EventsInterface::ON_PROCESS_INIT, null, $event->getParams());
+        $processEvent = $this->processEvent;
+        $processEvent->setName(SchedulerEvent::PROCESS_INIT);
+        $processEvent->setParams($event->getParams());
+        $this->events->triggerEvent($processEvent);
 
         return $this;
     }

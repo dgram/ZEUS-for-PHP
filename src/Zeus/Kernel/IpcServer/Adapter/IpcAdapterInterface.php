@@ -2,6 +2,11 @@
 
 namespace Zeus\Kernel\IpcServer\Adapter;
 
+/**
+ * Interface IpcAdapterInterface
+ * @package Zeus\Kernel\IpcServer\Adapter
+ * @internal
+ */
 interface IpcAdapterInterface
 {
     /**

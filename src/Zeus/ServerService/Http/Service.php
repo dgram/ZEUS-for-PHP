@@ -7,6 +7,9 @@ use Zend\Http\Response;
 use Zend\Stdlib\RequestInterface;
 use Zend\Stdlib\ResponseInterface;
 use Zend\Uri\Uri;
+use Zeus\Kernel\ProcessManager\Process;
+use Zeus\Kernel\ProcessManager\SchedulerEvent;
+use Zeus\ServerService\Http\Dispatcher\DispatcherWrapper;
 use Zeus\ServerService\Http\Dispatcher\Overseer;
 use Zeus\ServerService\Http\Dispatcher\StaticFileDispatcher;
 use Zeus\ServerService\Http\Message\Message;
@@ -20,8 +23,14 @@ use React\EventLoop\Factory as LoopFactory;
 
 class Service extends AbstractServerService
 {
+    /** @var Process */
+    protected $process;
+
     public function start()
     {
+        $this->getScheduler()->getEventManager()->attach(SchedulerEvent::PROCESS_INIT, function(SchedulerEvent $event) {
+            $this->process = $event->getProcess();
+        });
         $messageComponent = Message::class;
         $this->config['logger'] = get_class();
 
@@ -29,6 +38,14 @@ class Service extends AbstractServerService
         parent::start();
 
         return $this;
+    }
+
+    /**
+     * @return Process
+     */
+    public function getProcess()
+    {
+        return $this->process;
     }
 
     /**
@@ -48,11 +65,15 @@ class Service extends AbstractServerService
         $loop->removeStream($reactServer->master);
 
         $dispatcherConfig = $this->getConfig();
+        $dispatcherConfig['service'] = $this;
         $dispatchers =
-            new StaticFileDispatcher(
+            new DispatcherWrapper(
                 $dispatcherConfig,
-                new ZendFrameworkDispatcher(
-                    $dispatcherConfig
+                new StaticFileDispatcher(
+                    $dispatcherConfig,
+                    new ZendFrameworkDispatcher(
+                        $dispatcherConfig
+                    )
                 )
             );
 

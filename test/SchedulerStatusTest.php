@@ -6,7 +6,7 @@ use PHPUnit_Framework_TestCase;
 use Zend\EventManager\EventInterface;
 use Zend\Log\Logger;
 use Zend\Log\Writer\Noop;
-use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\Kernel\ProcessManager\SchedulerEvent;
 use Zeus\Kernel\ProcessManager\Status\SchedulerStatusView;
 use ZeusTest\Helpers\ZeusFactories;
 
@@ -29,13 +29,13 @@ class SchedulerStatusTest extends PHPUnit_Framework_TestCase
         });
 
         $em = $scheduler->getEventManager();
-        $em->attach(EventsInterface::ON_PROCESS_CREATE,
+        $em->attach(SchedulerEvent::PROCESS_CREATE,
             function(EventInterface $e) use (&$amountOfScheduledProcesses, &$processesCreated, $em) {
                 $amountOfScheduledProcesses++;
 
                 $uid = 100000000 + $amountOfScheduledProcesses;
                 $processesCreated[$uid] = true;
-                $em->trigger(EventsInterface::ON_PROCESS_CREATED, null, ['uid' => $uid]);
+                $em->trigger(SchedulerEvent::PROCESS_CREATED, null, ['uid' => $uid]);
             }
         );
 
