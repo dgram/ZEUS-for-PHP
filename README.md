@@ -230,7 +230,7 @@ To start the service manually, following command must be executed:
 ZEUS for PHP can be installed in two different ways:
 
 - via Composer: ```composer require zeus-server/zf3-server```
-- by unpacking ZEUS source code into your ZF3 `module` directory
+- by unpacking ZEUS source code into your ZF3 `module/Zeus` directory
 
 ## Initial Configuration
 
@@ -364,6 +364,14 @@ The above configuration parameters have been described in the __Process Schedule
 - More features introduced to ZEUS Web Server
 
 # Changelog
+
+## Version 1.3.0
+- [Feature] Heavy refactoring of `Scheduler` events
+- [Feature] Improved `Process` and `Scheduler` life cycle.
+- [Feature] New `SchedulerEvent` introduced.
+- [Feature] Now its possible to provide text description along the process status
+- [Feature] Console Server Service status command shows extended status descriptions
+- [Feature] From now on each HTTP keep-alive request handled by ZEUS Web Server will reduce the TTL of entire process.
 
 ## Version 1.2.3
 - [Feature] Introduced `ON_PROCESS_CREATED` event to `Scheduler`

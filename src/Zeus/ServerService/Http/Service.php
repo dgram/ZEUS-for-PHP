@@ -28,7 +28,11 @@ class Service extends AbstractServerService
 
     public function start()
     {
+<<<<<<< HEAD
+        $this->getScheduler()->getEventManager()->attach(SchedulerEvent::EVENT_PROCESS_INIT, function(SchedulerEvent $event) {
+=======
         $this->getScheduler()->getEventManager()->attach(SchedulerEvent::PROCESS_INIT, function(SchedulerEvent $event) {
+>>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
             $this->process = $event->getProcess();
         });
         $messageComponent = Message::class;

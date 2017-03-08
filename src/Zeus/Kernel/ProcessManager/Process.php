@@ -107,7 +107,11 @@ final class Process
 
         $event = $this->event;
         $event->setParams($payload);
+<<<<<<< HEAD
+        $event->setName(SchedulerEvent::EVENT_PROCESS_MESSAGE);
+=======
         $event->setName(SchedulerEvent::PROCESS_MESSAGE);
+>>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
         $this->events->triggerEvent($event);
 
         return $this;
@@ -123,7 +127,11 @@ final class Process
         $this->status->setStatusDescription($statusDescription);
         $this->sendStatus(ProcessState::RUNNING, $statusDescription);
         $event = $this->event;
+<<<<<<< HEAD
+        $event->setName(SchedulerEvent::EVENT_PROCESS_RUNNING);
+=======
         $event->setName(SchedulerEvent::PROCESS_RUNNING);
+>>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
         $event->setParams($this->status->toArray());
         $this->events->triggerEvent($event);
 
@@ -145,7 +153,11 @@ final class Process
 
         $this->status->setStatusDescription($statusDescription);
         $event = $this->event;
+<<<<<<< HEAD
+        $event->setName(SchedulerEvent::EVENT_PROCESS_WAITING);
+=======
         $event->setName(SchedulerEvent::PROCESS_WAITING);
+>>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
         $event->setParams($this->status->toArray());
         $this->events->triggerEvent($event);
         $this->sendStatus(ProcessState::WAITING, $statusDescription);
@@ -190,7 +202,11 @@ final class Process
         }
 
         $event = $this->event;
+<<<<<<< HEAD
+        $event->setName(SchedulerEvent::EVENT_PROCESS_EXIT);
+=======
         $event->setName(SchedulerEvent::PROCESS_EXIT);
+>>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
         $event->setParams($payload);
 
         $this->events->triggerEvent($event);
@@ -203,7 +219,11 @@ final class Process
      */
     public function mainLoop()
     {
+<<<<<<< HEAD
+        $this->events->attach(SchedulerEvent::EVENT_PROCESS_LOOP, function(EventInterface $event) {
+=======
         $this->events->attach(SchedulerEvent::PROCESS_LOOP, function(EventInterface $event) {
+>>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
             $this->sendStatus($this->status->getCode());
         });
 
@@ -215,7 +235,11 @@ final class Process
             $exception = null;
             try {
                 $event = $this->event;
+<<<<<<< HEAD
+                $event->setName(SchedulerEvent::EVENT_PROCESS_LOOP);
+=======
                 $event->setName(SchedulerEvent::PROCESS_LOOP);
+>>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
                 $event->setParams($this->status->toArray());
                 $this->events->triggerEvent($event);
             } catch (\Exception $exception) {
@@ -223,6 +247,7 @@ final class Process
             } catch (\Throwable $exception) {
                 $this->reportException($exception);
             }
+            $this->setWaiting($this->getStatus()->getStatusDescription());
         }
 
         $this->terminateProcess();

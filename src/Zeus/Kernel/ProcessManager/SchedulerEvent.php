@@ -8,6 +8,31 @@ use Zend\EventManager\Event;
  */
 class SchedulerEvent extends Event
 {
+<<<<<<< HEAD
+    const EVENT_PROCESS_CREATE = 'processCreate';
+    const EVENT_PROCESS_CREATED = 'processCreated';
+
+    const EVENT_PROCESS_MESSAGE = 'processMessage';
+
+    const EVENT_PROCESS_INIT = 'processStarted';
+    const EVENT_PROCESS_TERMINATED = 'processTerminated';
+    const EVENT_PROCESS_TERMINATE = 'processTerminate';
+    const EVENT_PROCESS_EXIT = 'processExit';
+
+    const EVENT_PROCESS_LOOP = 'processLoop';
+
+    const EVENT_PROCESS_RUNNING = 'processRunning';
+    const EVENT_PROCESS_WAITING = 'processWaiting';
+
+    const EVENT_SCHEDULER_START = 'schedulerStart';
+    const EVENT_SCHEDULER_STOP = 'schedulerStop';
+    const EVENT_SCHEDULER_LOOP = 'schedulerLoop';
+
+    // WARNING: the following INTERNAL_* events should not be used in custom projects
+    // and if used - are subjects to change and BC breaks.
+    const INTERNAL_EVENT_KERNEL_START = 'serverStart';
+    const INTERNAL_EVENT_KERNEL_STOP = 'serverStop';
+=======
     const PROCESS_CREATE = 'processCreate';
     const PROCESS_CREATED = 'processCreated';
 
@@ -28,6 +53,7 @@ class SchedulerEvent extends Event
     const SCHEDULER_LOOP = 'schedulerLoop';
     const SERVER_START = 'serverStart';
     const SERVER_STOP = 'serverStop';
+>>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
 
     /** @var Scheduler */
     protected $scheduler;
