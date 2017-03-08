@@ -39,7 +39,6 @@ final class PosixProcess implements MultiProcessingModuleInterface
      */
     public function attach(EventManagerInterface $events)
     {
-<<<<<<< HEAD
         $events->attach(SchedulerEvent::EVENT_PROCESS_CREATE, [$this, 'startTask']);
         $events->attach(SchedulerEvent::EVENT_PROCESS_WAITING, [$this, 'sigUnblock']);
         $events->attach(SchedulerEvent::EVENT_PROCESS_TERMINATE, [$this, 'onProcessTerminate']);
@@ -49,17 +48,6 @@ final class PosixProcess implements MultiProcessingModuleInterface
         $events->attach(SchedulerEvent::EVENT_SCHEDULER_START, [$this, 'onSchedulerInit']);
         $events->attach(SchedulerEvent::EVENT_SCHEDULER_STOP, [$this, 'shutdownServer'], -9999);
         $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, [$this, 'processSignals']);
-=======
-        $events->attach(SchedulerEvent::PROCESS_CREATE, [$this, 'startTask']);
-        $events->attach(SchedulerEvent::PROCESS_WAITING, [$this, 'sigUnblock']);
-        $events->attach(SchedulerEvent::PROCESS_TERMINATE, [$this, 'onProcessTerminate']);
-        $events->attach(SchedulerEvent::PROCESS_LOOP, [$this, 'sigDispatch']);
-        $events->attach(SchedulerEvent::PROCESS_RUNNING, [$this, 'sigBlock']);
-        $events->attach(SchedulerEvent::SERVER_START, [$this, 'onServerInit']);
-        $events->attach(SchedulerEvent::SCHEDULER_START, [$this, 'onSchedulerInit']);
-        $events->attach(SchedulerEvent::SCHEDULER_STOP, [$this, 'shutdownServer'], -9999);
-        $events->attach(SchedulerEvent::SCHEDULER_LOOP, [$this, 'processSignals']);
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
 
         $this->events = $events;
 
@@ -128,11 +116,7 @@ final class PosixProcess implements MultiProcessingModuleInterface
 
     public function onSchedulerTerminate()
     {
-<<<<<<< HEAD
         $this->events->trigger(SchedulerEvent::EVENT_SCHEDULER_STOP, null, ['uid' => getmypid()]);
-=======
-        $this->events->trigger(SchedulerEvent::SCHEDULER_STOP, null, ['uid' => getmypid()]);
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
     }
 
     public function sigBlock()
@@ -155,22 +139,14 @@ final class PosixProcess implements MultiProcessingModuleInterface
     {
         // catch other potential signals to avoid race conditions
         while (($pid = pcntl_wait($pcntlStatus, WNOHANG|WUNTRACED)) > 0) {
-<<<<<<< HEAD
             $eventType = $pid === getmypid() ? SchedulerEvent::EVENT_SCHEDULER_STOP : SchedulerEvent::EVENT_PROCESS_TERMINATED;
-=======
-            $eventType = $pid === getmypid() ? SchedulerEvent::SCHEDULER_STOP : SchedulerEvent::PROCESS_TERMINATED;
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
             $this->events->trigger($eventType, null, ['uid' => $pid]);
         }
 
         $this->sigDispatch();
 
         if ($this->ppid !== posix_getppid()) {
-<<<<<<< HEAD
             $this->events->trigger(SchedulerEvent::EVENT_SCHEDULER_STOP, null, ['uid' => $this->ppid]);
-=======
-            $this->events->trigger(SchedulerEvent::SCHEDULER_STOP, null, ['uid' => $this->ppid]);
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
         }
     }
 
@@ -189,11 +165,7 @@ final class PosixProcess implements MultiProcessingModuleInterface
         } else if ($pid) {
             // we are the parent
             $event->setParam('uid', $pid);
-<<<<<<< HEAD
             $this->events->trigger(SchedulerEvent::EVENT_PROCESS_CREATED, null, ['uid' => $pid, 'server' => $event->getParam('server')]);
-=======
-            $this->events->trigger(SchedulerEvent::PROCESS_CREATED, null, ['uid' => $pid, 'server' => $event->getParam('server')]);
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
 
             return $this;
         } else {
@@ -209,11 +181,8 @@ final class PosixProcess implements MultiProcessingModuleInterface
 
         $event->setParam('uid', $pid);
         $processEvent = $this->processEvent;
-<<<<<<< HEAD
+
         $processEvent->setName(SchedulerEvent::EVENT_PROCESS_INIT);
-=======
-        $processEvent->setName(SchedulerEvent::PROCESS_INIT);
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
         $processEvent->setParams($event->getParams());
         $this->events->triggerEvent($processEvent);
 

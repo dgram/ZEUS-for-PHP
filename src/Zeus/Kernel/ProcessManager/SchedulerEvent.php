@@ -8,7 +8,6 @@ use Zend\EventManager\Event;
  */
 class SchedulerEvent extends Event
 {
-<<<<<<< HEAD
     const EVENT_PROCESS_CREATE = 'processCreate';
     const EVENT_PROCESS_CREATED = 'processCreated';
 
@@ -32,28 +31,6 @@ class SchedulerEvent extends Event
     // and if used - are subjects to change and BC breaks.
     const INTERNAL_EVENT_KERNEL_START = 'serverStart';
     const INTERNAL_EVENT_KERNEL_STOP = 'serverStop';
-=======
-    const PROCESS_CREATE = 'processCreate';
-    const PROCESS_CREATED = 'processCreated';
-
-    const PROCESS_MESSAGE = 'processMessage';
-
-    const PROCESS_INIT = 'processStarted';
-    const PROCESS_TERMINATED = 'processTerminated';
-    const PROCESS_TERMINATE = 'processTerminate';
-    const PROCESS_EXIT = 'processExit';
-
-    const PROCESS_LOOP = 'processLoop';
-
-    const PROCESS_RUNNING = 'processRunning';
-    const PROCESS_WAITING = 'processWaiting';
-
-    const SCHEDULER_START = 'schedulerStart';
-    const SCHEDULER_STOP = 'schedulerStop';
-    const SCHEDULER_LOOP = 'schedulerLoop';
-    const SERVER_START = 'serverStart';
-    const SERVER_STOP = 'serverStop';
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
 
     /** @var Scheduler */
     protected $scheduler;

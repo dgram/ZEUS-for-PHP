@@ -28,14 +28,8 @@ class SchedulerFactory implements FactoryInterface
      */
     public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
-<<<<<<< HEAD
-        //$processEvent = new SchedulerEvent();
         $schedulerEvent = new SchedulerEvent();
         $processEvent = $schedulerEvent;
-=======
-        $processEvent = new SchedulerEvent();
-        $schedulerEvent = new SchedulerEvent();
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
 
         $schedulerConfig = $this->getSchedulerConfig($container, $options['scheduler_name']);
         $schedulerConfig['service_name'] = $options['service_name'];

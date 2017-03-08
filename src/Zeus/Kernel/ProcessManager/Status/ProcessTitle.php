@@ -41,7 +41,6 @@ class ProcessTitle
     public function attach(EventManagerInterface $events)
     {
         if (function_exists('cli_get_process_title') && function_exists('cli_set_process_title')) {
-<<<<<<< HEAD
             $events->attach(SchedulerEvent::EVENT_PROCESS_CREATE, [$this, 'onProcessStarting']);
             $events->attach(SchedulerEvent::EVENT_PROCESS_WAITING, [$this, 'onProcessWaiting']);
             $events->attach(SchedulerEvent::EVENT_PROCESS_TERMINATE, [$this, 'onProcessTerminate']);
@@ -51,17 +50,6 @@ class ProcessTitle
             $events->attach(SchedulerEvent::EVENT_SCHEDULER_START, [$this, 'onSchedulerStart']);
             $events->attach(SchedulerEvent::EVENT_SCHEDULER_STOP, [$this, 'onServerStop']);
             $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, [$this, 'onSchedulerLoop']);
-=======
-            $events->attach(SchedulerEvent::PROCESS_CREATE, [$this, 'onProcessStarting']);
-            $events->attach(SchedulerEvent::PROCESS_WAITING, [$this, 'onProcessWaiting']);
-            $events->attach(SchedulerEvent::PROCESS_TERMINATE, [$this, 'onProcessTerminate']);
-            $events->attach(SchedulerEvent::PROCESS_LOOP, [$this, 'onProcessWaiting']);
-            $events->attach(SchedulerEvent::PROCESS_RUNNING, [$this, 'onProcessRunning']);
-            $events->attach(SchedulerEvent::SERVER_START, [$this, 'onServerStart']);
-            $events->attach(SchedulerEvent::SCHEDULER_START, [$this, 'onSchedulerStart']);
-            $events->attach(SchedulerEvent::SCHEDULER_STOP, [$this, 'onServerStop']);
-            $events->attach(SchedulerEvent::SCHEDULER_LOOP, [$this, 'onSchedulerLoop']);
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
         }
 
         return $this;

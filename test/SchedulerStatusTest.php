@@ -29,21 +29,13 @@ class SchedulerStatusTest extends PHPUnit_Framework_TestCase
         });
 
         $em = $scheduler->getEventManager();
-<<<<<<< HEAD
         $em->attach(SchedulerEvent::EVENT_PROCESS_CREATE,
-=======
-        $em->attach(SchedulerEvent::PROCESS_CREATE,
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
             function(EventInterface $e) use (&$amountOfScheduledProcesses, &$processesCreated, $em) {
                 $amountOfScheduledProcesses++;
 
                 $uid = 100000000 + $amountOfScheduledProcesses;
                 $processesCreated[$uid] = true;
-<<<<<<< HEAD
                 $em->trigger(SchedulerEvent::EVENT_PROCESS_CREATED, null, ['uid' => $uid]);
-=======
-                $em->trigger(SchedulerEvent::PROCESS_CREATED, null, ['uid' => $uid]);
->>>>>>> 62bb26e12691695d3208bff4dc2497dcae70eb26
             }
         );
 
