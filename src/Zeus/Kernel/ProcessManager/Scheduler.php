@@ -552,7 +552,7 @@ final class Scheduler
             $terminated = 0;
 
             foreach ($this->processes as $pid => $processStatus) {
-                if (!$processStatus || !(ProcessState::isIdle($processStatus) || !ProcessState::isExiting($processStatus))) {
+                if (!$processStatus || !ProcessState::isIdle($processStatus)) {
                     continue;
                 }
 
