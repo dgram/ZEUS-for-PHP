@@ -139,13 +139,14 @@ class SchedulerStatusView
             $connector = ($key === $lastElementKey ? '└' : '├');
             /** @var ProcessState $processStatus */
             $output .= $console->colorize(
-                sprintf("   %s── Process %s [%s] CPU: %d%%, RPS: %s, REQ: %s" . PHP_EOL,
+                sprintf("   %s── Process %s [%s] CPU: %d%%, RPS: %s, REQ: %s%s" . PHP_EOL,
                     $connector,
                     $processStatus->getId(),
                     $processStatusChars[$processStatus->getId()],
                     $processStatus->getCpuUsage(),
                     ProcessState::addUnitsToNumber($processStatus->getNumberOfTasksPerSecond()),
-                    ProcessState::addUnitsToNumber($processStatus->getNumberOfFinishedTasks())
+                    ProcessState::addUnitsToNumber($processStatus->getNumberOfFinishedTasks()),
+                    $processStatus->getStatusDescription() ? ': ' . $processStatus->getStatusDescription() : ''
                     ),
                 $color
             );

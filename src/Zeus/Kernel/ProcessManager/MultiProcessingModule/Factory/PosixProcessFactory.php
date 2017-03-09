@@ -29,7 +29,7 @@ class PosixProcessFactory implements FactoryInterface
     {
         /** @var Scheduler $scheduler */
         $scheduler = $options['scheduler'];
-        $driver = new PosixProcess();
+        $driver = new PosixProcess($options['scheduler_event'], $options['process_event']);
         $driver->attach($scheduler->getEventManager());
 
         return $driver;

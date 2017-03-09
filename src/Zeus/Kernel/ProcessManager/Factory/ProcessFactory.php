@@ -26,7 +26,7 @@ class ProcessFactory implements FactoryInterface
      */
     public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
-        $task = new Process();
+        $task = new Process($options['process_event']);
         $task->setLogger($options['logger_adapter']);
 
         return $task;

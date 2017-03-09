@@ -5,6 +5,7 @@ namespace Zeus\Kernel\ProcessManager\Status;
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\Kernel\ProcessManager\SchedulerEvent;
 
 class ProcessTitle
 {
@@ -40,15 +41,15 @@ class ProcessTitle
     public function attach(EventManagerInterface $events)
     {
         if (function_exists('cli_get_process_title') && function_exists('cli_set_process_title')) {
-            $events->attach(EventsInterface::ON_PROCESS_CREATE, [$this, 'onProcessStarting']);
-            $events->attach(EventsInterface::ON_PROCESS_IDLING, [$this, 'onProcessWaiting']);
-            $events->attach(EventsInterface::ON_PROCESS_TERMINATE, [$this, 'onProcessTerminate']);
-            $events->attach(EventsInterface::ON_PROCESS_LOOP, [$this, 'onProcessWaiting']);
-            $events->attach(EventsInterface::ON_PROCESS_RUNNING, [$this, 'onProcessRunning']);
-            $events->attach(EventsInterface::ON_SERVER_START, [$this, 'onServerStart']);
-            $events->attach(EventsInterface::ON_SCHEDULER_START, [$this, 'onSchedulerStart']);
-            $events->attach(EventsInterface::ON_SCHEDULER_STOP, [$this, 'onServerStop']);
-            $events->attach(EventsInterface::ON_SCHEDULER_LOOP, [$this, 'onSchedulerLoop']);
+            $events->attach(SchedulerEvent::EVENT_PROCESS_CREATE, [$this, 'onProcessStarting']);
+            $events->attach(SchedulerEvent::EVENT_PROCESS_WAITING, [$this, 'onProcessWaiting']);
+            $events->attach(SchedulerEvent::EVENT_PROCESS_TERMINATE, [$this, 'onProcessTerminate']);
+            $events->attach(SchedulerEvent::EVENT_PROCESS_LOOP, [$this, 'onProcessWaiting']);
+            $events->attach(SchedulerEvent::EVENT_PROCESS_RUNNING, [$this, 'onProcessRunning']);
+            $events->attach(SchedulerEvent::INTERNAL_EVENT_KERNEL_START, [$this, 'onServerStart']);
+            $events->attach(SchedulerEvent::EVENT_SCHEDULER_START, [$this, 'onSchedulerStart']);
+            $events->attach(SchedulerEvent::EVENT_SCHEDULER_STOP, [$this, 'onServerStop']);
+            $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, [$this, 'onSchedulerLoop']);
         }
 
         return $this;
@@ -73,7 +74,7 @@ class ProcessTitle
                 $event->getParam('service_name'),
                 $status,
                 ProcessState::addUnitsToNumber($event->getParam('requests_finished')),
-                ProcessState::addUnitsToNumber($event->getParam('requestsPerSecond')),
+                ProcessState::addUnitsToNumber($event->getParam('requests_per_second')),
                 $event->getParam('cpu_usage')
             ));
         } else {

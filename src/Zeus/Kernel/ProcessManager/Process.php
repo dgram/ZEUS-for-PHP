@@ -6,7 +6,7 @@ use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zend\Log\LoggerInterface;
 use Zeus\Kernel\IpcServer\Message;
-use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\Kernel\ProcessManager\SchedulerEvent;
 use Zeus\Kernel\ProcessManager\Status\ProcessState;
 
 final class Process
@@ -25,6 +25,9 @@ final class Process
 
     /** @var LoggerInterface */
     protected $logger;
+
+    /** @var SchedulerEvent */
+    protected $event;
 
     /**
      * @param string $uid
@@ -74,9 +77,12 @@ final class Process
 
     /**
      * Process constructor.
+     * @param \Zeus\Kernel\ProcessManager\SchedulerEvent $event
      */
-    public function __construct()
+    public function __construct(SchedulerEvent $event)
     {
+        $this->event = $event;
+        $event->setProcess($this);
         set_exception_handler([$this, 'terminateProcess']);
     }
 
@@ -99,34 +105,50 @@ final class Process
             ]
         ];
 
-        $this->events->trigger(EventsInterface::ON_PROCESS_MESSAGE, $this, $payload);
+        $event = $this->event;
+        $event->setParams($payload);
+        $event->setName(SchedulerEvent::EVENT_PROCESS_MESSAGE);
+        $this->events->triggerEvent($event);
 
         return $this;
     }
 
     /**
+     * @param string $statusDescription
      * @return $this
      */
-    public function setBusy()
+    public function setRunning($statusDescription = null)
     {
         $this->status->incrementNumberOfFinishedTasks();
-        $this->sendStatus(ProcessState::RUNNING);
-        $this->events->trigger(EventsInterface::ON_PROCESS_RUNNING, $this, $this->status->toArray());
+        $this->status->setStatusDescription($statusDescription);
+        $this->sendStatus(ProcessState::RUNNING, $statusDescription);
+        $event = $this->event;
+        $event->setName(SchedulerEvent::EVENT_PROCESS_RUNNING);
+        $event->setParams($this->status->toArray());
+        $this->events->triggerEvent($event);
 
         return $this;
     }
 
     /**
+     * @param string $statusDescription
      * @return $this
      */
-    public function setIdle()
+    public function setWaiting($statusDescription = null)
     {
-        if ($this->status->getCode() === ProcessState::WAITING) {
+        if ($this->status->getCode() === ProcessState::WAITING
+            &&
+            $statusDescription === $this->status->getStatusDescription()
+        ) {
             return $this;
         }
 
-        $this->events->trigger(EventsInterface::ON_PROCESS_IDLING, $this, $this->status->toArray());
-        $this->sendStatus(ProcessState::WAITING);
+        $this->status->setStatusDescription($statusDescription);
+        $event = $this->event;
+        $event->setName(SchedulerEvent::EVENT_PROCESS_WAITING);
+        $event->setParams($this->status->toArray());
+        $this->events->triggerEvent($event);
+        $this->sendStatus(ProcessState::WAITING, $statusDescription);
 
         return $this;
     }
@@ -167,7 +189,11 @@ final class Process
             $payload['exception'] = $exception;
         }
 
-        $this->events->trigger(EventsInterface::ON_PROCESS_EXIT, $this, $payload);
+        $event = $this->event;
+        $event->setName(SchedulerEvent::EVENT_PROCESS_EXIT);
+        $event->setParams($payload);
+
+        $this->events->triggerEvent($event);
     }
 
     /**
@@ -177,23 +203,27 @@ final class Process
      */
     public function mainLoop()
     {
-        $this->events->attach(EventsInterface::ON_PROCESS_LOOP, function(EventInterface $event) {
+        $this->events->attach(SchedulerEvent::EVENT_PROCESS_LOOP, function(EventInterface $event) {
             $this->sendStatus($this->status->getCode());
         });
 
         $exception = null;
-        $this->setIdle();
+        $this->setWaiting();
 
         // handle only a finite number of requests and terminate gracefully to avoid potential memory/resource leaks
         while ($this->ttl - $this->status->getNumberOfFinishedTasks() > 0) {
             $exception = null;
             try {
-                $this->events->trigger(EventsInterface::ON_PROCESS_LOOP, $this, $this->status->toArray());
+                $event = $this->event;
+                $event->setName(SchedulerEvent::EVENT_PROCESS_LOOP);
+                $event->setParams($this->status->toArray());
+                $this->events->triggerEvent($event);
             } catch (\Exception $exception) {
                 $this->reportException($exception);
             } catch (\Throwable $exception) {
                 $this->reportException($exception);
             }
+            $this->setWaiting($this->getStatus()->getStatusDescription());
         }
 
         $this->terminateProcess();
@@ -209,9 +239,10 @@ final class Process
 
     /**
      * @param int $statusCode
+     * @param string $statusDescription
      * @return $this
      */
-    protected function sendStatus($statusCode)
+    protected function sendStatus($statusCode, $statusDescription = null)
     {
         $oldStatus = $this->status->getCode();
         $this->status->setCode($statusCode);
@@ -219,7 +250,7 @@ final class Process
 
         // send new status to Scheduler only if it changed
         if ($oldStatus !== $statusCode) {
-            $this->sendMessage(Message::IS_STATUS, 'statusSent');
+            $this->sendMessage(Message::IS_STATUS, $statusDescription ? $statusDescription : '');
         }
 
         return $this;

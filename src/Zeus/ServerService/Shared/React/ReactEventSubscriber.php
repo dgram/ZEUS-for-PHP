@@ -6,8 +6,8 @@ use React\EventLoop\LoopInterface;
 use React\Socket\Server as SocketServer;
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
-use Zeus\Kernel\ProcessManager\EventsInterface;
 use Zeus\Kernel\ProcessManager\Process;
+use Zeus\Kernel\ProcessManager\SchedulerEvent;
 
 class ReactEventSubscriber
 {
@@ -37,9 +37,9 @@ class ReactEventSubscriber
      */
     public function attach(EventManagerInterface $events)
     {
-        $events->attach(EventsInterface::ON_SCHEDULER_START, [$this, 'onSchedulerStart']);
-        $events->attach(EventsInterface::ON_PROCESS_CREATE, [$this, 'onTaskStart']);
-        $events->attach(EventsInterface::ON_PROCESS_LOOP, [$this, 'onTaskLoop']);
+        $events->attach(SchedulerEvent::EVENT_SCHEDULER_START, [$this, 'onSchedulerStart']);
+        $events->attach(SchedulerEvent::EVENT_PROCESS_CREATE, [$this, 'onTaskStart']);
+        $events->attach(SchedulerEvent::EVENT_PROCESS_LOOP, [$this, 'onTaskLoop']);
 
         return $this;
     }
@@ -65,22 +65,20 @@ class ReactEventSubscriber
     }
 
     /**
-     * @param EventInterface $event
+     * @param SchedulerEvent $event
      * @return $this
      */
-    public function onTaskLoop(EventInterface $event)
+    public function onTaskLoop(SchedulerEvent $event)
     {
         /** @var Process $task */
-        $task = $event->getTarget();
+        $task = $event->getProcess();
 
         if (($connectionSocket = @stream_socket_accept($this->socket->master, 1))) {
-            $task->setBusy();
             $timer = $this->loop->addPeriodicTimer(1, [$this, 'heartBeat']);
+
             $this->socket->handleConnection($connectionSocket);
             $this->loop->run();
             $this->loop->cancelTimer($timer);
-
-            $task->setIdle();
         }
 
         $this->heartBeat();

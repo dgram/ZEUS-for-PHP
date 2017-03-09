@@ -5,7 +5,6 @@ namespace ZeusTest\Helpers;
 use ReflectionProperty;
 use Zend\EventManager\EventInterface;
 use Zend\Log\Logger;
-use Zend\ModuleManager\ModuleManager;
 use Zend\Mvc\Service\EventManagerFactory;
 use Zend\Mvc\Service\ModuleManagerFactory;
 use Zend\Mvc\Service\ServiceListenerFactory;
@@ -22,7 +21,7 @@ use Zeus\Kernel\ProcessManager\Factory\ProcessFactory;
 use Zeus\Kernel\ProcessManager\Factory\SchedulerFactory;
 use Zeus\Kernel\ProcessManager\Process;
 use Zeus\Kernel\ProcessManager\Scheduler;
-use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\Kernel\ProcessManager\SchedulerEvent;
 use Zeus\ServerService\Manager;
 use Zeus\ServerService\Shared\Factory\AbstractServerServiceFactory;
 use Zeus\ServerService\Shared\Logger\IpcLogWriter;
@@ -148,7 +147,7 @@ trait ZeusFactories
 
         if ($mainLoopIterations > 0) {
             $events = $scheduler->getEventManager();
-            $events->attach(EventsInterface::ON_SCHEDULER_LOOP, function (EventInterface $e) use (&$mainLoopIterations, $loopCallback) {
+            $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, function (EventInterface $e) use (&$mainLoopIterations, $loopCallback) {
 
                 $mainLoopIterations--;
 

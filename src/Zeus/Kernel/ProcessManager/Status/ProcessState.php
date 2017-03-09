@@ -64,14 +64,6 @@ class ProcessState
     /** @var int */
     protected $tasksPerSecond = 0;
 
-    /**
-     * @return int
-     */
-    public function getNumberOfTasksPerSecond()
-    {
-        return $this->tasksPerSecond;
-    }
-
     /** @var int */
     protected $tasksInThisSecond = 0;
 
@@ -80,6 +72,9 @@ class ProcessState
 
     /** @var float */
     protected $cpuUsage = null;
+
+    /** @var string */
+    protected $statusDescription = '';
 
     /**
      * TaskStatus constructor.
@@ -94,16 +89,25 @@ class ProcessState
         $this->serviceName = $serviceName;
     }
 
+    /**
+     * @return int
+     */
+    public function getNumberOfTasksPerSecond()
+    {
+        return $this->tasksPerSecond;
+    }
+
     public function toArray()
     {
         return [
             'code' => $this->code,
             'uid' => getmypid(),
             'requests_finished' => $this->tasksFinished,
-            'requestsPerSecond' => $this->tasksPerSecond,
+            'requests_per_second' => $this->tasksPerSecond,
             'time' => $this->time,
             'service_name' => $this->serviceName,
-            'cpu_usage' => $this->getCpuUsage()
+            'cpu_usage' => $this->getCpuUsage(),
+            'status_description' => $this->statusDescription,
         ];
     }
 
@@ -116,11 +120,31 @@ class ProcessState
         $status = new static($array['service_name'], $array['code']);
         $status->setTime($array['time']);
         $status->tasksFinished = $array['requests_finished'];
-        $status->tasksPerSecond = $array['requestsPerSecond'];
+        $status->tasksPerSecond = $array['requests_per_second'];
         $status->cpuUsage = $array['cpu_usage'];
         $status->id = $array['uid'];
+        $status->statusDescription = $array['status_description'];
 
         return $status;
+    }
+
+    /**
+     * @return string
+     */
+    public function getStatusDescription()
+    {
+        return $this->statusDescription;
+    }
+
+    /**
+     * @param string $statusDescription
+     * @return $this
+     */
+    public function setStatusDescription($statusDescription)
+    {
+        $this->statusDescription = $statusDescription;
+
+        return $this;
     }
 
     /**
