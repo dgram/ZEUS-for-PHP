@@ -365,6 +365,9 @@ The above configuration parameters have been described in the __Process Schedule
 
 # Changelog
 
+## Version 1.3.1
+- [Fix] Configured Travis builds to not to use phpunit 6.x 
+
 ## Version 1.3.0
 - [Feature] Heavy refactoring of `Scheduler` events
 - [Feature] Improved `Process` and `Scheduler` life cycle.
