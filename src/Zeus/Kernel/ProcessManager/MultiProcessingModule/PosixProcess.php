@@ -165,7 +165,13 @@ final class PosixProcess implements MultiProcessingModuleInterface
         } else if ($pid) {
             // we are the parent
             $event->setParam('uid', $pid);
-            $this->events->trigger(SchedulerEvent::EVENT_PROCESS_CREATED, null, ['uid' => $pid, 'server' => $event->getParam('server')]);
+            $processEvent = $this->processEvent;
+            $processEvent->setName(SchedulerEvent::EVENT_PROCESS_CREATED);
+            $params = $event->getParams();
+            $params['uid'] = $pid;
+            $params['server'] = $event->getParam('server');
+            $processEvent->setParams($params);
+            $this->events->triggerEvent($processEvent);
 
             return $this;
         } else {

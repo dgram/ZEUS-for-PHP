@@ -14,6 +14,7 @@ use Zend\Stdlib\ArrayUtils;
 use Zeus\Controller\Factory\ZeusControllerFactory;
 use Zeus\Controller\ZeusController;
 use Zeus\Kernel\IpcServer\Adapter\IpcAdapterInterface;
+use Zeus\Kernel\IpcServer\Adapter\SocketAdapter;
 use Zeus\Kernel\IpcServer\Factory\IpcAdapterAbstractFactory;
 use Zeus\Kernel\IpcServer\Factory\IpcServerFactory;
 use Zeus\Kernel\ProcessManager\Factory\ManagerFactory;
@@ -131,7 +132,7 @@ trait ZeusFactories
     {
         $sm = $this->getServiceManager();
 
-        $ipcAdapter = $sm->build(DummyIpcAdapter::class, ['service_name' => 'test-service']);
+        $ipcAdapter = $sm->build(SocketAdapter::class, ['service_name' => 'test-service']);
         $logger = new Logger();
         $ipcWriter = new IpcLogWriter();
         $ipcWriter->setIpcAdapter($ipcAdapter);
@@ -147,16 +148,16 @@ trait ZeusFactories
 
         if ($mainLoopIterations > 0) {
             $events = $scheduler->getEventManager();
-            $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, function (EventInterface $e) use (&$mainLoopIterations, $loopCallback) {
+            $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, function (SchedulerEvent $e) use (&$mainLoopIterations, $loopCallback) {
 
                 $mainLoopIterations--;
 
                 if ($mainLoopIterations === 0) {
-                    $e->getTarget()->setContinueMainLoop(false);
+                    $e->getScheduler()->setContinueMainLoop(false);
                 }
 
                 if ($loopCallback) {
-                    $loopCallback($e->getTarget());
+                    $loopCallback($e->getScheduler());
                 }
             });
         }

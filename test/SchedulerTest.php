@@ -64,8 +64,8 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
 
         $events = $scheduler->getEventManager();
         $counter = 0;
-        $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, function(EventInterface $e) use (&$counter) {
-            $e->getTarget()->setContinueMainLoop(false);
+        $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, function(SchedulerEvent $e) use (&$counter) {
+            $e->getScheduler()->setContinueMainLoop(false);
             $counter++;
         });
 
@@ -155,6 +155,103 @@ class SchedulerTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals(8, $amountOfScheduledProcesses, "Scheduler should try to create 8 processes on its startup");
         $this->assertEquals($processesCreated, $processesInitialized, "Scheduler should have initialized all requested processes");
+    }
+
+    public function testProcessCreationWhenTooLittleOfThemIsWaiting()
+    {
+        $scheduler = $this->getScheduler(2);
+
+        $amountOfScheduledProcesses = 0;
+        $processesCreated = [];
+        $processesInitialized = [];
+
+        $em = $scheduler->getEventManager();
+        $em->attach(SchedulerEvent::EVENT_PROCESS_EXIT, function(EventInterface $e) {$e->stopPropagation(true);});
+        $em->attach(SchedulerEvent::EVENT_PROCESS_INIT, function(EventInterface $e) {$e->stopPropagation(true);});
+        $em->attach(SchedulerEvent::EVENT_PROCESS_CREATE,
+            function(EventInterface $e) use ($em) {
+                $e->stopPropagation(true);
+                $em->trigger(SchedulerEvent::EVENT_PROCESS_CREATED, null, []);
+            }
+        );
+        $em->attach(SchedulerEvent::EVENT_PROCESS_CREATED,
+            function(EventInterface $e) use (&$amountOfScheduledProcesses, &$processesCreated, $em) {
+                $amountOfScheduledProcesses++;
+
+                $uid = 100000000 + $amountOfScheduledProcesses;
+                $event = new SchedulerEvent();
+                $event->setName(SchedulerEvent::EVENT_PROCESS_INIT);
+                $event->setParams(['uid' => $uid]);
+                $em->triggerEvent($event);
+                $processesCreated[] = $uid;
+            }
+        );
+        $em->attach(SchedulerEvent::EVENT_PROCESS_LOOP,
+            function(SchedulerEvent $e) use (&$processesInitialized) {
+                $uid = $e->getProcess()->getId();
+                $processesInitialized[] = $uid;
+
+                // kill the processs
+                $e->getProcess()->getStatus()->incrementNumberOfFinishedTasks(100);
+                if ($uid < 10000001) {
+                    $e->getProcess()->setRunning();
+                }
+            }
+        );
+        $scheduler->startScheduler(new Event());
+
+        $this->assertEquals(11, $amountOfScheduledProcesses, "Scheduler should try to create 8 processes on startup and 3 additional one if all the previous were busy");
+    }
+
+    public function testProcessCreationWhenTooManyOfThemIsWaiting()
+    {
+        $scheduler = $this->getScheduler(4);
+        $scheduler->getConfig()->setStartProcesses(20);
+        $scheduler->getConfig()->setProcessIdleTimeout(0);
+
+        $amountOfScheduledProcesses = 0;
+        $amountOfTerminateCommands = 0;
+        $processesCreated = [];
+        $processesInitialized = [];
+        $processesToTerminate = [];
+
+        $em = $scheduler->getEventManager();
+        $em->attach(SchedulerEvent::EVENT_PROCESS_EXIT, function(EventInterface $e) {$e->stopPropagation(true);});
+        $em->attach(SchedulerEvent::EVENT_PROCESS_TERMINATE,
+            function(SchedulerEvent $processEvent) use ($em, & $processesToTerminate, & $amountOfTerminateCommands) {
+                $processEvent->stopPropagation(true);
+                $amountOfTerminateCommands++;
+                $processesToTerminate[] = $processEvent->getParam('uid');
+            }
+        );
+        $em->attach(SchedulerEvent::EVENT_PROCESS_CREATE,
+            function(SchedulerEvent $e) use ($em, &$amountOfScheduledProcesses) {
+                $amountOfScheduledProcesses++;
+
+                $uid = 100000000 + $amountOfScheduledProcesses;
+                $e->stopPropagation(true);
+                $e->setName(SchedulerEvent::EVENT_PROCESS_CREATED);
+                $e->setParam('uid', $uid);
+                $em->triggerEvent($e);
+            }
+        );
+        $em->attach(SchedulerEvent::EVENT_PROCESS_CREATED,
+            function(SchedulerEvent $event) use (&$amountOfScheduledProcesses, &$processesCreated, $em, $scheduler) {
+                $processesCreated[] = $event->getParam('uid');
+            }
+        );
+        $em->attach(SchedulerEvent::EVENT_PROCESS_LOOP,
+            function(SchedulerEvent $e) use (&$processesInitialized) {
+                $uid = $e->getProcess()->getId();
+                $processesInitialized[] = $uid;
+
+                // kill the processs
+                $e->getProcess()->getStatus()->incrementNumberOfFinishedTasks(100);
+            }
+        );
+        $scheduler->startScheduler(new Event());
+
+        $this->assertEquals(15, $amountOfTerminateCommands, "Scheduler should try to reduce number of processes to 5 if too many of them is waiting");
     }
 
     public function getSchedulerLaunchTypes()

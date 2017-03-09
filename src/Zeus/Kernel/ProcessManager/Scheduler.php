@@ -151,7 +151,7 @@ final class Scheduler
         $this->processTitle->attach($this->getEventManager());
         $this->schedulerEvent = $schedulerEvent;
         $this->processEvent = $processEvent;
-
+        $this->processEvent->setScheduler($this);
         $this->schedulerEvent->setScheduler($this);
     }
 
@@ -575,7 +575,10 @@ final class Scheduler
                     $this->processes[$pid] = $processStatus;
 
                     $this->log(\Zend\Log\Logger::DEBUG, sprintf('Terminating idle process %d', $pid));
-                    $this->events->trigger(SchedulerEvent::EVENT_PROCESS_TERMINATE, $this, $this->getEventExtraData(['uid' => $pid, 'soft' => true]));
+                    $event = $this->processEvent;
+                    $event->setName(SchedulerEvent::EVENT_PROCESS_TERMINATE);
+                    $event->setParams($this->getEventExtraData(['uid' => $pid, 'soft' => true]));
+                    $this->events->triggerEvent($event);
 
                     ++$terminated;
 
@@ -616,7 +619,10 @@ final class Scheduler
     protected function mainLoop()
     {
         while ($this->isContinueMainLoop()) {
-            $this->events->trigger(SchedulerEvent::EVENT_SCHEDULER_LOOP, $this, $this->getEventExtraData());
+            $event = $this->schedulerEvent;
+            $event->setName(SchedulerEvent::EVENT_SCHEDULER_LOOP);
+            $event->setParams($this->getEventExtraData());
+            $this->events->triggerEvent($event);
         }
 
         return $this;
