@@ -104,7 +104,7 @@ trait Header
         }
 
         try {
-            $request = Request::fromStringOfHeaders($this->headers);
+            $request = Request::fromStringOfHeaders($this->headers, false);
             $request->getUri()->setScheme('http');
             $this->headers = null;
 

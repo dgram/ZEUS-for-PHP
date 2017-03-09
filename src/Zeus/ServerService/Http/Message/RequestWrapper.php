@@ -3,6 +3,7 @@
 namespace Zeus\ServerService\Http\Message;
 
 use Zend\Stdlib\RequestInterface;
+use Zend\Http\Request;
 
 class RequestWrapper implements RequestInterface
 {
@@ -10,23 +11,6 @@ class RequestWrapper implements RequestInterface
     protected $request;
 
     protected $headersOverview;
-
-    /**
-     * @return string
-     */
-    public function getBasePath()
-    {
-        return $this->request->getBasePath();
-    }
-
-    /**
-     * @param string $basePath
-     * @return $this
-     */
-    public function setBasePath($basePath)
-    {
-        return $this->request->setBasePath($basePath);
-    }
 
     public function getHeaderOverview($name, $toLower = false)
     {

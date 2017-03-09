@@ -176,6 +176,55 @@ class HttpMessageTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    public function getQueryData()
+    {
+        return [
+            ["test" => "ok"],
+            ["test1" => "ok", "test2" => "test2"],
+            ["test1" => "test2", "test3" => "test4", "test4" => ["aaa" => "bbb"], "test5" => 12]
+        ];
+    }
+
+    /**
+     * @dataProvider getQueryData
+     */
+    public function testIfQueryDataIsCorrectlyInterpreted()
+    {
+        $queryData = func_get_args();
+        $queryString = http_build_query($queryData);
+        $message = $this->getHttpGetRequestString("/test?" . $queryString);
+        $testConnection = new TestConnection();
+        for($chunkSize = 1, $messageSize = strlen($message); $chunkSize < $messageSize; $chunkSize++) {
+            /** @var Request $request */
+            $request = null;
+
+            $errorOccured = false;
+
+            $errorHandler = function($request, $exception) use (& $errorOccured) {
+                $errorOccured = $exception;
+            };
+
+            $requestHandler = function ($_request) use (&$request) {
+                $request = $_request;
+            };
+            $httpAdapter = $this->getHttpMessageParser($requestHandler, $errorHandler);
+
+            $chunks = str_split($message, $chunkSize);
+            foreach ($chunks as $index => $chunk) {
+                $httpAdapter->onMessage($testConnection, $chunk);
+
+                if ($errorOccured) {
+                    $this->fail("Error handler caught an error when parsing chunk #$index: " . $errorOccured->getMessage());
+                }
+            }
+
+            $this->assertEquals("/test", $request->getUri()->getPath());
+            foreach ($queryData as $key => $value) {
+                $this->assertEquals($value, $request->getQuery($key), "Request object should contain valid GET data for key $key");
+            }
+        }
+    }
+
     public function testIfOptionsHeadAndTraceReturnEmptyBody()
     {
         foreach (["HEAD", "TRACE", "OPTIONS"] as $method) {
@@ -380,6 +429,36 @@ World
         $this->assertEquals(200, $rawResponse->getStatusCode(), "HTTP response should return 200 OK status, message received: " . $rawResponse->getContent());
         $this->assertEquals(3, $request->getFiles()->count(), "HTTP request contains 3 files but Request object reported " . $request->getFiles()->count());
         $this->assertEquals(0, strlen($request->getContent()), "No content should be present in request object in case of multipart data: " . $request->getContent());
+    }
+
+    /**
+     * @return mixed[]
+     */
+    public function getInvalidMessages()
+    {
+        return [
+            ["\r\n\r\n"],
+            ["DUMMY / HTTP/1.0\r\n\r\n"],
+            ["GET / HTTP/10.1\r\n\r\n"],
+        ];
+    }
+
+    /**
+     * @dataProvider getInvalidMessages
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessageRegExp /Incorrect headers/
+     * @param string $message
+     */
+    public function testIfMessageWithInvalidHeadersIsHandled($message)
+    {
+        $dispatcherLaunched = false;
+        /** @var Message $httpAdapter */
+        $httpAdapter = $this->getHttpMessageParser(function() use (& $dispatcherLaunched) {$dispatcherLaunched = true;});
+        $httpAdapter->onMessage(new TestConnection(), $message);
+
+        $this->assertTrue($dispatcherLaunched, "Dispatcher should be called");
+
+        $this->assertEquals(1, $httpAdapter->getNumberOfFinishedRequests());
     }
 
     protected function getBuffer()

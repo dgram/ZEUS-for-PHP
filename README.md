@@ -215,13 +215,13 @@ To start the service manually, following command must be executed:
 - _Windows platform currently not supported_
 
 ## PHP requirements
-- PHP 5.4+, PHP 7+ recommended for performance reasons (up to 4x faster)
+- PHP 5.6+, HHVM or PHP 7+ recommended for performance reasons (its up to 4x faster, less memory used)
 - Posix module installed and enabled
 - Pcntl module installed and enabled
 - socket functions enabled for IPC purposes
 
 ## Library requirements
-- Zend Framework 3+ (with the following modules installed: MVC, Console MVC, Console, Logger)
+- Zend Framework 3+ (with the following modules installed: `zend-mvc`, `zend-mvc-console`, `zend-console`, `zend-log`, `zend-config`)
 - ReactPHP library
 
 # First steps
