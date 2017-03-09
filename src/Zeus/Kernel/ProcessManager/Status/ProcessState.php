@@ -208,7 +208,7 @@ class ProcessState
      */
     public static function isExiting(array $array)
     {
-        return $array['code'] === ProcessState::EXITING;
+        return $array['code'] === ProcessState::EXITING || $array['code'] === ProcessState::TERMINATED;
     }
 
     /**

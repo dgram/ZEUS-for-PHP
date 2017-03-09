@@ -74,11 +74,13 @@ class ReactEventSubscriber
         $task = $event->getProcess();
 
         if (($connectionSocket = @stream_socket_accept($this->socket->master, 1))) {
+            $event->getProcess()->setRunning();
             $timer = $this->loop->addPeriodicTimer(1, [$this, 'heartBeat']);
 
             $this->socket->handleConnection($connectionSocket);
             $this->loop->run();
             $this->loop->cancelTimer($timer);
+            $event->getProcess()->setWaiting();
         }
 
         $this->heartBeat();
