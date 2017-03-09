@@ -151,7 +151,7 @@ final class Scheduler
         $this->processTitle->attach($this->getEventManager());
         $this->schedulerEvent = $schedulerEvent;
         $this->processEvent = $processEvent;
-
+        $this->processEvent->setScheduler($this);
         $this->schedulerEvent->setScheduler($this);
     }
 
@@ -205,20 +205,29 @@ final class Scheduler
      */
     protected function onProcessExit(EventInterface $event)
     {
-        if ($event->getParam('uid') === $this->getId()) {
+        $pid = $event->getParam('uid');
+        if ($pid === $this->getId()) {
             $this->log(\Zend\Log\Logger::DEBUG, "Scheduler is exiting...");
             $event = $this->schedulerEvent;
             $event->setName(SchedulerEvent::EVENT_SCHEDULER_STOP);
             $event->setParams($this->getEventExtraData());
             $this->getEventManager()->triggerEvent($event);
-            return;
+            return $this;
         }
 
-        if ($this->isContinueMainLoop()) {
-            $this->manageProcesses();
+        $this->log(\Zend\Log\Logger::DEBUG, "Process $pid exited");
+
+        if (isset($this->processes[$pid])) {
+            $processStatus = $this->processes[$pid];
+
+            if (!ProcessState::isExiting($processStatus) && $processStatus['time'] < microtime(true) - $this->getConfig()->getProcessIdleTimeout()) {
+                $this->log(\Zend\Log\Logger::ERR, "Process $pid exited prematurely");
+            }
+
+            unset($this->processes[$pid]);
         }
 
-        $this->terminateProcess($event->getParam('uid'));
+        return $this;
     }
 
     /**
@@ -236,8 +245,7 @@ final class Scheduler
             if ($pid) {
                 $this->events->trigger(SchedulerEvent::EVENT_PROCESS_TERMINATE, $this,
                     $this->getEventExtraData([
-                        'uid' => $pid,
-                        'soft' => true,
+                        'uid' => $pid, 'soft' => true,
                     ]
                     ));
                 $this->log(\Zend\Log\Logger::INFO, "Server stopped");
@@ -385,27 +393,6 @@ final class Scheduler
         $this->log(\Zend\Log\Logger::INFO, "Scheduler started");
 
         return $this->mainLoop();
-    }
-
-    /**
-     * @param string $pid
-     * @return $this
-     */
-    public function terminateProcess($pid)
-    {
-        $this->log(\Zend\Log\Logger::DEBUG, "Process $pid exited");
-
-        if (isset($this->processes[$pid])) {
-            $processStatus = $this->processes[$pid];
-
-            if (!ProcessState::isExiting($processStatus) && $processStatus['time'] < microtime(true) - $this->getConfig()->getProcessIdleTimeout()) {
-                $this->log(\Zend\Log\Logger::ERR, "Process $pid exited prematurely");
-            }
-
-            unset($this->processes[$pid]);
-        }
-
-        return $this;
     }
 
     /**
@@ -572,10 +559,14 @@ final class Scheduler
                 if ($processStatus['time'] < $expireTime) {
                     $processStatus['code'] = ProcessState::TERMINATED;
                     $processStatus['time'] = $this->getTime();
+                    unset ($this->processes[$pid]);
                     $this->processes[$pid] = $processStatus;
 
                     $this->log(\Zend\Log\Logger::DEBUG, sprintf('Terminating idle process %d', $pid));
-                    $this->events->trigger(SchedulerEvent::EVENT_PROCESS_TERMINATE, $this, $this->getEventExtraData(['uid' => $pid, 'soft' => true]));
+                    $event = $this->processEvent;
+                    $event->setName(SchedulerEvent::EVENT_PROCESS_TERMINATE);
+                    $event->setParams($this->getEventExtraData(['uid' => $pid, 'soft' => true]));
+                    $this->events->triggerEvent($event);
 
                     ++$terminated;
 
@@ -616,7 +607,10 @@ final class Scheduler
     protected function mainLoop()
     {
         while ($this->isContinueMainLoop()) {
-            $this->events->trigger(SchedulerEvent::EVENT_SCHEDULER_LOOP, $this, $this->getEventExtraData());
+            $event = $this->schedulerEvent;
+            $event->setName(SchedulerEvent::EVENT_SCHEDULER_LOOP);
+            $event->setParams($this->getEventExtraData());
+            $this->events->triggerEvent($event);
         }
 
         return $this;

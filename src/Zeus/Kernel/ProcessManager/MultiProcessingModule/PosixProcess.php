@@ -116,7 +116,10 @@ final class PosixProcess implements MultiProcessingModuleInterface
 
     public function onSchedulerTerminate()
     {
-        $this->events->trigger(SchedulerEvent::EVENT_SCHEDULER_STOP, null, ['uid' => getmypid()]);
+        $event = $this->schedulerEvent;
+        $event->setName(SchedulerEvent::EVENT_SCHEDULER_STOP);
+        $event->setParam('uid', getmypid());
+        $this->events->triggerEvent($event);
     }
 
     public function sigBlock()
@@ -139,14 +142,19 @@ final class PosixProcess implements MultiProcessingModuleInterface
     {
         // catch other potential signals to avoid race conditions
         while (($pid = pcntl_wait($pcntlStatus, WNOHANG|WUNTRACED)) > 0) {
-            $eventType = $pid === getmypid() ? SchedulerEvent::EVENT_SCHEDULER_STOP : SchedulerEvent::EVENT_PROCESS_TERMINATED;
-            $this->events->trigger($eventType, null, ['uid' => $pid]);
+            $event = $this->processEvent;
+            $event->setName(SchedulerEvent::EVENT_PROCESS_TERMINATED);
+            $event->setParam('uid', $pid);
+            $this->events->triggerEvent($event);
         }
 
         $this->sigDispatch();
 
         if ($this->ppid !== posix_getppid()) {
-            $this->events->trigger(SchedulerEvent::EVENT_SCHEDULER_STOP, null, ['uid' => $this->ppid]);
+            $event = $this->schedulerEvent;
+            $event->setName(SchedulerEvent::EVENT_SCHEDULER_STOP);
+            $event->setParam('uid', $this->ppid);
+            $this->events->triggerEvent($event);
         }
     }
 
@@ -165,7 +173,13 @@ final class PosixProcess implements MultiProcessingModuleInterface
         } else if ($pid) {
             // we are the parent
             $event->setParam('uid', $pid);
-            $this->events->trigger(SchedulerEvent::EVENT_PROCESS_CREATED, null, ['uid' => $pid, 'server' => $event->getParam('server')]);
+            $processEvent = $this->processEvent;
+            $processEvent->setName(SchedulerEvent::EVENT_PROCESS_CREATED);
+            $params = $event->getParams();
+            $params['uid'] = $pid;
+            $params['server'] = $event->getParam('server');
+            $processEvent->setParams($params);
+            $this->events->triggerEvent($processEvent);
 
             return $this;
         } else {

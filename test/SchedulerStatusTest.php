@@ -53,7 +53,6 @@ class SchedulerStatusTest extends PHPUnit_Framework_TestCase
     public function testSchedulerStatusInOfflineSituation()
     {
         $scheduler = $this->getScheduler(1);
-        $scheduler->start();
         $schedulerStatusView = new SchedulerStatusView($scheduler);
         $statusOutput = $schedulerStatusView->getStatus();
         $this->assertFalse($statusOutput, 'No output should be present when service is offline');

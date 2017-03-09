@@ -90,6 +90,7 @@ class SchedulerStatusView
                     break;
 
                 case ProcessState::EXITING:
+                case ProcessState::TERMINATED:
                     ++$exitingChildren;
                     ++$allChildren;
                     $processStatusChars[$processStatus->getId()] = "T";
