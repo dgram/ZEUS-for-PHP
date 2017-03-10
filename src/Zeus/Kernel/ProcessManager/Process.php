@@ -119,7 +119,14 @@ final class Process
      */
     public function setRunning($statusDescription = null)
     {
-        $this->status->incrementNumberOfFinishedTasks();
+        if ($this->status->getCode() === ProcessState::RUNNING) {
+            if ($statusDescription === $this->status->getStatusDescription()) {
+                return $this;
+            }
+        } else {
+            $this->getStatus()->incrementNumberOfFinishedTasks(1);
+        }
+
         $this->status->setStatusDescription($statusDescription);
         $this->sendStatus(ProcessState::RUNNING, $statusDescription);
         $event = $this->event;

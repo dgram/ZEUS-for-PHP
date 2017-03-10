@@ -6,6 +6,8 @@ use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zeus\Kernel\ProcessManager\Exception\ProcessManagerException;
 use Zeus\Kernel\ProcessManager\EventsInterface;
+use Zeus\Kernel\ProcessManager\MultiProcessingModule\PosixProcess\PcntlBridge;
+use Zeus\Kernel\ProcessManager\MultiProcessingModule\PosixProcess\PosixProcessBridgeInterface;
 use Zeus\Kernel\ProcessManager\SchedulerEvent;
 
 final class PosixProcess implements MultiProcessingModuleInterface
@@ -17,20 +19,44 @@ final class PosixProcess implements MultiProcessingModuleInterface
     public $ppid;
 
     /** @var SchedulerEvent */
-    protected $schedulerEvent;
+    protected $event;
 
     /** @var SchedulerEvent */
     protected $processEvent;
 
+    /** @var bool|null */
+    private static $isPcntlExtensionLoaded = null;
+
+    /** @var PosixProcessBridgeInterface */
+    protected static $pcntlBridge;
+
     /**
      * PosixDriver constructor.
      */
-    public function __construct($schedulerEvent, $processEvent)
+    public function __construct($schedulerEvent)
     {
-        $this->schedulerEvent = $schedulerEvent;
-        $this->processEvent = $processEvent;
-        $this->checkSetup();
+        $this->event = $schedulerEvent;
         $this->ppid = getmypid();
+    }
+
+    /**
+     * @return PosixProcessBridgeInterface
+     */
+    private function getPcntlBridge()
+    {
+        if (!isset(static::$pcntlBridge)) {
+            static::$pcntlBridge = new PcntlBridge();
+        }
+
+        return static::$pcntlBridge;
+    }
+
+    /**
+     * @param PosixProcessBridgeInterface $bridge
+     */
+    public static function setPcntlBridge(PosixProcessBridgeInterface $bridge)
+    {
+        static::$pcntlBridge = $bridge;
     }
 
     /**
@@ -39,15 +65,15 @@ final class PosixProcess implements MultiProcessingModuleInterface
      */
     public function attach(EventManagerInterface $events)
     {
-        $events->attach(SchedulerEvent::EVENT_PROCESS_CREATE, [$this, 'startTask']);
-        $events->attach(SchedulerEvent::EVENT_PROCESS_WAITING, [$this, 'sigUnblock']);
+        $events->attach(SchedulerEvent::INTERNAL_EVENT_KERNEL_START, [$this, 'onKernelStart']);
+        $events->attach(SchedulerEvent::EVENT_PROCESS_CREATE, [$this, 'onProcessCreate']);
+        $events->attach(SchedulerEvent::EVENT_PROCESS_WAITING, [$this, 'onProcessWaiting']);
         $events->attach(SchedulerEvent::EVENT_PROCESS_TERMINATE, [$this, 'onProcessTerminate']);
-        $events->attach(SchedulerEvent::EVENT_PROCESS_LOOP, [$this, 'sigDispatch']);
-        $events->attach(SchedulerEvent::EVENT_PROCESS_RUNNING, [$this, 'sigBlock']);
-        $events->attach(SchedulerEvent::INTERNAL_EVENT_KERNEL_START, [$this, 'onServerInit']);
+        $events->attach(SchedulerEvent::EVENT_PROCESS_LOOP, [$this, 'onProcessLoop']);
+        $events->attach(SchedulerEvent::EVENT_PROCESS_RUNNING, [$this, 'onProcessRunning']);
         $events->attach(SchedulerEvent::EVENT_SCHEDULER_START, [$this, 'onSchedulerInit']);
-        $events->attach(SchedulerEvent::EVENT_SCHEDULER_STOP, [$this, 'shutdownServer'], -9999);
-        $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, [$this, 'processSignals']);
+        $events->attach(SchedulerEvent::EVENT_SCHEDULER_STOP, [$this, 'onSchedulerStop'], -9999);
+        $events->attach(SchedulerEvent::EVENT_SCHEDULER_LOOP, [$this, 'onSchedulerLoop']);
 
         $this->events = $events;
 
@@ -55,47 +81,27 @@ final class PosixProcess implements MultiProcessingModuleInterface
     }
 
     /**
-     * @return $this
+     * @param bool $throwException
+     * @return bool
+     * @throws \Exception
      */
-    private function checkSetup()
+    public static function isSupported($throwException = false)
     {
-        $className = basename(str_replace('\\', '/', get_class($this)));
+        $bridge = static::getPcntlBridge();
 
-        if (!extension_loaded('pcntl')) {
-            throw new \RuntimeException(sprintf("PCNTL extension is required by %s but disabled in PHP",
-                    $className
-                )
-            );
-        }
-
-        $requiredFunctions = [
-            'pcntl_signal',
-            'pcntl_sigprocmask',
-            'pcntl_signal_dispatch',
-            'pcntl_wifexited',
-            'pcntl_wait',
-            'posix_getppid',
-            'posix_kill'
-        ];
-
-        $missingFunctions = [];
-
-        foreach ($requiredFunctions as $function) {
-            if (!is_callable($function)) {
-                $missingFunctions[] = $function;
+        try {
+            $bridge->isSupported();
+        } catch (\Exception $e) {
+            if ($throwException) {
+                throw $e;
+            } else {
+                return false;
             }
         }
 
-        if ($missingFunctions) {
-            throw new \RuntimeException(sprintf("Following functions are required by %s but disabled in PHP: %s",
-                    $className,
-                    implode(", ", $missingFunctions)
-                )
-            );
-        }
-
-        return $this;
+        return true;
     }
+
 
     /**
      * @param EventInterface $event
@@ -108,72 +114,73 @@ final class PosixProcess implements MultiProcessingModuleInterface
     /**
      *
      */
-    public function onServerInit()
+    public function onKernelStart()
     {
         // make the current process a session leader
-        posix_setsid();
+        $this->getPcntlBridge()->posixSetSid();
     }
 
     public function onSchedulerTerminate()
     {
-        $event = $this->schedulerEvent;
+        $event = $this->event;
         $event->setName(SchedulerEvent::EVENT_SCHEDULER_STOP);
         $event->setParam('uid', getmypid());
         $this->events->triggerEvent($event);
     }
 
-    public function sigBlock()
+    public function onProcessRunning()
     {
-        pcntl_sigprocmask(SIG_BLOCK, [SIGTERM]);
+        $this->getPcntlBridge()->pcntlSigprocmask(SIG_BLOCK, [SIGTERM]);
     }
 
-    public function sigDispatch()
+    public function onProcessLoop()
     {
-        pcntl_signal_dispatch();
+        $this->getPcntlBridge()->pcntlSignalDispatch();
     }
 
-    public function sigUnblock()
+    public function onProcessWaiting()
     {
-        pcntl_sigprocmask(SIG_UNBLOCK, [SIGTERM]);
-        $this->sigDispatch();
+        $this->getPcntlBridge()->pcntlSigprocmask(SIG_UNBLOCK, [SIGTERM]);
+        $this->onProcessLoop();
     }
 
-    public function processSignals()
+    public function onSchedulerLoop()
     {
         // catch other potential signals to avoid race conditions
-        while (($pid = pcntl_wait($pcntlStatus, WNOHANG|WUNTRACED)) > 0) {
-            $event = $this->processEvent;
+        while (($pid = $this->getPcntlBridge()->pcntlWait($pcntlStatus, WNOHANG|WUNTRACED)) > 0) {
+            $event = $this->event;
             $event->setName(SchedulerEvent::EVENT_PROCESS_TERMINATED);
             $event->setParam('uid', $pid);
             $this->events->triggerEvent($event);
         }
 
-        $this->sigDispatch();
+        $this->onProcessLoop();
 
-        if ($this->ppid !== posix_getppid()) {
-            $event = $this->schedulerEvent;
+        if ($this->ppid !== $this->getPcntlBridge()->posixGetPpid()) {
+            $event = $this->event;
             $event->setName(SchedulerEvent::EVENT_SCHEDULER_STOP);
             $event->setParam('uid', $this->ppid);
             $this->events->triggerEvent($event);
         }
     }
 
-    public function shutdownServer()
+    public function onSchedulerStop()
     {
-        pcntl_wait($status, WUNTRACED);
-        $this->sigDispatch();
+        $this->getPcntlBridge()->pcntlWait($status, WUNTRACED);
+        $this->onProcessLoop();
     }
 
-    public function startTask(EventInterface $event)
+    public function onProcessCreate(EventInterface $event)
     {
-        $pid = pcntl_fork();
+        $pcntl = $this->getPcntlBridge();
+        $pid = $pcntl->pcntlFork();
 
         if ($pid === -1) {
             throw new ProcessManagerException("Could not create a descendant process", ProcessManagerException::PROCESS_NOT_CREATED);
         } else if ($pid) {
             // we are the parent
             $event->setParam('uid', $pid);
-            $processEvent = $this->processEvent;
+            $processEvent = $this->event;
             $processEvent->setName(SchedulerEvent::EVENT_PROCESS_CREATED);
             $params = $event->getParams();
             $params['uid'] = $pid;
@@ -181,37 +188,36 @@ final class PosixProcess implements MultiProcessingModuleInterface
             $processEvent->setParams($params);
             $this->events->triggerEvent($processEvent);
 
-            return $this;
+            return;
         } else {
             $pid = getmypid();
         }
 
         // we are the new process
-        pcntl_signal(SIGTERM, SIG_DFL);
-        pcntl_signal(SIGINT, SIG_DFL);
-        pcntl_signal(SIGHUP, SIG_DFL);
-        pcntl_signal(SIGQUIT, SIG_DFL);
-        pcntl_signal(SIGTSTP, SIG_DFL);
+        $pcntl->pcntlSignal(SIGTERM, SIG_DFL);
+        $pcntl->pcntlSignal(SIGINT, SIG_DFL);
+        $pcntl->pcntlSignal(SIGHUP, SIG_DFL);
+        $pcntl->pcntlSignal(SIGQUIT, SIG_DFL);
+        $pcntl->pcntlSignal(SIGTSTP, SIG_DFL);
 
         $event->setParam('uid', $pid);
-        $processEvent = $this->processEvent;
+        $processEvent = $this->event;
 
         $processEvent->setName(SchedulerEvent::EVENT_PROCESS_INIT);
         $processEvent->setParams($event->getParams());
         $this->events->triggerEvent($processEvent);
-
-        return $this;
     }
 
     public function onSchedulerInit()
     {
+        $pcntl = $this->getPcntlBridge();
         $onTaskTerminate = function() { $this->onSchedulerTerminate(); };
         //pcntl_sigprocmask(SIG_BLOCK, [SIGCHLD]);
-        pcntl_signal(SIGTERM, $onTaskTerminate);
-        pcntl_signal(SIGQUIT, $onTaskTerminate);
-        pcntl_signal(SIGTSTP, $onTaskTerminate);
-        pcntl_signal(SIGINT, $onTaskTerminate);
-        pcntl_signal(SIGHUP, $onTaskTerminate);
+        $pcntl->pcntlSignal(SIGTERM, $onTaskTerminate);
+        $pcntl->pcntlSignal(SIGQUIT, $onTaskTerminate);
+        $pcntl->pcntlSignal(SIGTSTP, $onTaskTerminate);
+        $pcntl->pcntlSignal(SIGINT, $onTaskTerminate);
+        $pcntl->pcntlSignal(SIGHUP, $onTaskTerminate);
     }
 
     /**
@@ -221,7 +227,7 @@ final class PosixProcess implements MultiProcessingModuleInterface
      */
     protected function terminateTask($pid, $useSoftTermination = false)
     {
-        posix_kill($pid, $useSoftTermination ? SIGINT : SIGKILL);
+        $this->getPcntlBridge()->posixKill($pid, $useSoftTermination ? SIGINT : SIGKILL);
 
         return $this;
     }
