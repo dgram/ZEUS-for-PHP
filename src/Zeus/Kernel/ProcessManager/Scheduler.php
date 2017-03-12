@@ -51,7 +51,7 @@ final class Scheduler
     protected $processTitle;
 
     /** @var SchedulerEvent */
-    private $schedulerEvent;
+    private $event;
 
     /** @var SchedulerEvent */
     private $processEvent;
@@ -129,9 +129,8 @@ final class Scheduler
      * @param LoggerInterface $logger
      * @param IpcAdapterInterface $ipcAdapter
      * @param $schedulerEvent
-     * @param $processEvent
      */
-    public function __construct($config, Process $processService, LoggerInterface $logger, IpcAdapterInterface $ipcAdapter, $schedulerEvent, $processEvent)
+    public function __construct($config, Process $processService, LoggerInterface $logger, IpcAdapterInterface $ipcAdapter, $schedulerEvent)
     {
         $this->config = new Config($config);
         $this->ipcAdapter = $ipcAdapter;
@@ -149,10 +148,8 @@ final class Scheduler
 
         $this->processTitle = new ProcessTitle();
         $this->processTitle->attach($this->getEventManager());
-        $this->schedulerEvent = $schedulerEvent;
-        $this->processEvent = $processEvent;
-        $this->processEvent->setScheduler($this);
-        $this->schedulerEvent->setScheduler($this);
+        $this->event = $schedulerEvent;
+        $this->event->setScheduler($this);
     }
 
     /**
@@ -208,7 +205,7 @@ final class Scheduler
         $pid = $event->getParam('uid');
         if ($pid === $this->getId()) {
             $this->log(\Zend\Log\Logger::DEBUG, "Scheduler is exiting...");
-            $event = $this->schedulerEvent;
+            $event = $this->event;
             $event->setName(SchedulerEvent::EVENT_SCHEDULER_STOP);
             $event->setParams($this->getEventExtraData());
             $this->getEventManager()->triggerEvent($event);
@@ -317,8 +314,8 @@ final class Scheduler
 
         $events = $this->getEventManager();
         $events->attach(SchedulerEvent::EVENT_SCHEDULER_START, [$this, 'startScheduler'], 0);
-        $schedulerEvent = $this->schedulerEvent;
-        $processEvent = $this->processEvent;
+        $schedulerEvent = $this->event;
+        $processEvent = $this->event;
 
         try {
             if (!$launchAsDaemon) {
@@ -471,7 +468,7 @@ final class Scheduler
         $this->setTime(microtime(true));
 
         for ($i = 0; $i < $count; ++$i) {
-            $event = $this->processEvent;
+            $event = $this->event;
             $event->setName(SchedulerEvent::EVENT_PROCESS_CREATE);
             $event->setParams($this->getEventExtraData());
             $this->getEventManager()->triggerEvent($event);
@@ -563,7 +560,7 @@ final class Scheduler
                     $this->processes[$pid] = $processStatus;
 
                     $this->log(\Zend\Log\Logger::DEBUG, sprintf('Terminating idle process %d', $pid));
-                    $event = $this->processEvent;
+                    $event = $this->event;
                     $event->setName(SchedulerEvent::EVENT_PROCESS_TERMINATE);
                     $event->setParams($this->getEventExtraData(['uid' => $pid, 'soft' => true]));
                     $this->events->triggerEvent($event);
@@ -607,7 +604,7 @@ final class Scheduler
     protected function mainLoop()
     {
         while ($this->isContinueMainLoop()) {
-            $event = $this->schedulerEvent;
+            $event = $this->event;
             $event->setName(SchedulerEvent::EVENT_SCHEDULER_LOOP);
             $event->setParams($this->getEventExtraData());
             $this->events->triggerEvent($event);

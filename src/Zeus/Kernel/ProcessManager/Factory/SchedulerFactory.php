@@ -29,7 +29,6 @@ class SchedulerFactory implements FactoryInterface
     public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
         $schedulerEvent = new SchedulerEvent();
-        $processEvent = $schedulerEvent;
 
         $schedulerConfig = $this->getSchedulerConfig($container, $options['scheduler_name']);
         $schedulerConfig['service_name'] = $options['service_name'];
@@ -37,10 +36,10 @@ class SchedulerFactory implements FactoryInterface
         $serviceLoggerAdapter = $options['service_logger_adapter'];
         $mainLoggerAdapter = $options['main_logger_adapter'];
 
-        $processService = $container->build(Process::class, ['logger_adapter' => $serviceLoggerAdapter, 'process_event' => $processEvent]);
+        $processService = $container->build(Process::class, ['logger_adapter' => $serviceLoggerAdapter, 'process_event' => $schedulerEvent]);
 
-        $scheduler = new Scheduler($schedulerConfig, $processService, $mainLoggerAdapter, $options['ipc_adapter'], $schedulerEvent, $processEvent);
-        $container->build($schedulerConfig['multiprocessing_module'], ['scheduler' => $scheduler, 'process_event' => $processEvent, 'scheduler_event' => $schedulerEvent]);
+        $scheduler = new Scheduler($schedulerConfig, $processService, $mainLoggerAdapter, $options['ipc_adapter'], $schedulerEvent);
+        $container->build($schedulerConfig['multiprocessing_module'], ['scheduler' => $scheduler, 'scheduler_event' => $schedulerEvent]);
 
         return $scheduler;
     }
