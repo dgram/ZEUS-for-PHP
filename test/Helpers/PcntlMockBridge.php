@@ -11,6 +11,8 @@ class PcntlMockBridge implements PosixProcessBridgeInterface
     protected $pcntlWaitPids = [];
     protected $forkResult;
     protected $posixPppid;
+    protected $signalDispatch;
+    protected $signalHandlers;
 
     /**
      * @return mixed[]
@@ -45,7 +47,21 @@ class PcntlMockBridge implements PosixProcessBridgeInterface
     {
         $this->executionLog[] = [__METHOD__, func_get_args()];
 
+        if ($this->signalDispatch && isset($this->signalHandlers[$this->signalDispatch])) {
+            $signal = $this->signalDispatch;
+            $this->signalDispatch = null;
+            call_user_func($this->signalHandlers[$signal], $this->signalDispatch);
+        }
+
         return true;
+    }
+
+    /**
+     * @param int $signal
+     */
+    public function setSignal($signal)
+    {
+        $this->signalDispatch = $signal;
     }
 
     /**
@@ -94,6 +110,7 @@ class PcntlMockBridge implements PosixProcessBridgeInterface
     public function pcntlSignal($signal, $handler, $restartSysCalls = true)
     {
         $this->executionLog[] = [__METHOD__, func_get_args()];
+        $this->signalHandlers[$signal] = $handler;
 
         return true;
     }

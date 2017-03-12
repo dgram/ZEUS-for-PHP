@@ -154,4 +154,68 @@ class PosixProcessTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(2, $this->countMethodInExecutionLog($logArray, 'pcntlWait'), 'Wait for signal should be performed');
         $this->assertEquals(98765, $event->getParam('uid'), 'Correct process UID should be returned on its termination');
     }
+
+    public function signalsProvider()
+    {
+        return [
+            [SIGTERM],
+            [SIGINT],
+            [SIGHUP],
+            [SIGQUIT],
+            [SIGTSTP],
+        ];
+    }
+
+    /**
+     * @dataProvider signalsProvider
+     */
+    public function testDetectionOfSchedulerTermination($signal)
+    {
+        $em = new EventManager();
+
+        $pcntlMock = new PcntlMockBridge();
+        $pcntlMock->setSignal($signal);
+
+        PosixProcess::setPcntlBridge($pcntlMock);
+        $event = new SchedulerEvent();
+        $posixProcess = new PosixProcess($event);
+        $posixProcess->attach($em);
+
+        $event->setName(SchedulerEvent::EVENT_SCHEDULER_START);
+        $em->triggerEvent($event);
+
+        $event->setName(SchedulerEvent::EVENT_SCHEDULER_LOOP);
+        $em->triggerEvent($event);
+
+        $this->assertEquals(SchedulerEvent::EVENT_SCHEDULER_STOP, $event->getName());
+        $logArray = $pcntlMock->getExecutionLog();
+        $this->assertEquals(2, $this->countMethodInExecutionLog($logArray, 'pcntlWait'), 'Wait for signal should be performed');
+        $this->assertEquals(2, $this->countMethodInExecutionLog($logArray, 'pcntlSignalDispatch'), 'Signal dispatching should be performed');
+        $this->assertEquals(getmypid(), $event->getParam('uid'), 'Correct process UID should be returned on its termination');
+    }
+
+    public function testDetectionOfSchedulersParentTermination()
+    {
+        $em = new EventManager();
+
+        $pcntlMock = new PcntlMockBridge();
+        $pcntlMock->setPpid(1234567890);
+
+        PosixProcess::setPcntlBridge($pcntlMock);
+        $event = new SchedulerEvent();
+        $posixProcess = new PosixProcess($event);
+        $posixProcess->attach($em);
+
+        $event->setName(SchedulerEvent::EVENT_SCHEDULER_START);
+        $em->triggerEvent($event);
+
+        $event->setName(SchedulerEvent::EVENT_SCHEDULER_LOOP);
+        $em->triggerEvent($event);
+
+        $this->assertEquals(SchedulerEvent::EVENT_SCHEDULER_STOP, $event->getName());
+        $logArray = $pcntlMock->getExecutionLog();
+        $this->assertEquals(2, $this->countMethodInExecutionLog($logArray, 'pcntlWait'), 'Wait for signal should be performed');
+        $this->assertEquals(2, $this->countMethodInExecutionLog($logArray, 'pcntlSignalDispatch'), 'Signal dispatching should be performed');
+        $this->assertEquals(getmypid(), $event->getParam('uid'), 'Correct process UID should be returned on its termination');
+    }
 }
