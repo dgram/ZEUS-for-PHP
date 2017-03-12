@@ -13,6 +13,7 @@ class PcntlMockBridge implements PosixProcessBridgeInterface
     protected $posixPppid;
     protected $signalDispatch;
     protected $signalHandlers;
+    protected $isSupported;
 
     /**
      * @return mixed[]
@@ -170,5 +171,22 @@ class PcntlMockBridge implements PosixProcessBridgeInterface
     public function isSupported()
     {
         $this->executionLog[] = [__METHOD__, func_get_args()];
+
+        if (!$this->isSupported) {
+            $className = basename(str_replace('\\', '/', static::class));
+
+            throw new \RuntimeException(sprintf("PCNTL extension is required by %s but disabled in PHP",
+                    $className
+                )
+            );
+        }
+    }
+
+    /**
+     * @param bool $isSupported
+     */
+    public function setIsSupported($isSupported)
+    {
+        $this->isSupported = $isSupported;
     }
 }

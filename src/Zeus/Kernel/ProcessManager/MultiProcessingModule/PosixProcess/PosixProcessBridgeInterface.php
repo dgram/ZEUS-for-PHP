@@ -26,7 +26,7 @@ interface PosixProcessBridgeInterface
 
     /**
      * @param int $signal
-     * @param callable $handler
+     * @param callable|int $handler
      * @param bool $restartSysCalls
      * @return bool
      */

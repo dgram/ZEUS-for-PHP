@@ -5,6 +5,7 @@ namespace ZeusTest;
 use PHPUnit_Framework_TestCase;
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\EventManager;
+use Zeus\Kernel\ProcessManager\MultiProcessingModule\MultiProcessingModuleCapabilities;
 use Zeus\Kernel\ProcessManager\MultiProcessingModule\PosixProcess;
 use Zeus\Kernel\ProcessManager\Scheduler;
 use Zeus\Kernel\ProcessManager\SchedulerEvent;
@@ -217,5 +218,93 @@ class PosixProcessTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(2, $this->countMethodInExecutionLog($logArray, 'pcntlWait'), 'Wait for signal should be performed');
         $this->assertEquals(2, $this->countMethodInExecutionLog($logArray, 'pcntlSignalDispatch'), 'Signal dispatching should be performed');
         $this->assertEquals(getmypid(), $event->getParam('uid'), 'Correct process UID should be returned on its termination');
+    }
+
+    public function testDetectionIfPcntlIsSupported()
+    {
+        $pcntlMock = new PosixProcess\PcntlBridge();
+        PosixProcess::setPcntlBridge($pcntlMock);
+
+        $this->assertEquals(extension_loaded('pcntl'), PosixProcess::isSupported(false), ('PCNTL should be ' . extension_loaded('pcntl') ? 'enabled' : 'disabled'));
+    }
+
+    public function testDetectionIfPcntlIsSupportedOrNot()
+    {
+        $pcntlMock = new PcntlMockBridge();
+        PosixProcess::setPcntlBridge($pcntlMock);
+
+        $exceptionCatched = 0;
+
+        foreach ([true, false] as $isSupported) {
+            $pcntlMock->setIsSupported($isSupported);
+            $this->assertEquals($isSupported, PosixProcess::isSupported(false), ('PCNTL should be ' . $isSupported ? 'enabled' : 'disabled'));
+            if (!$isSupported) {
+                try {
+                    $this->assertEquals($isSupported, PosixProcess::isSupported(true), ('PCNTL should be ' . $isSupported ? 'enabled' : 'disabled'));
+                } catch (\RuntimeException $e) {
+                    $exceptionCatched++;
+                }
+            }
+        }
+
+        $this->assertEquals(1, $exceptionCatched, 'One exception should be thrown when PCNTL was unavailable');
+    }
+
+    public function testIfSetSsidIsPerformedOnStartup()
+    {
+        $em = new EventManager();
+        $pcntlMock = new PcntlMockBridge();
+
+        PosixProcess::setPcntlBridge($pcntlMock);
+        $event = new SchedulerEvent();
+        $posixProcess = new PosixProcess($event);
+        $posixProcess->attach($em);
+
+        $event->setName(SchedulerEvent::INTERNAL_EVENT_KERNEL_START);
+        $em->triggerEvent($event);
+
+        $event->setName(SchedulerEvent::EVENT_SCHEDULER_START);
+        $em->triggerEvent($event);
+
+        $logArray = $pcntlMock->getExecutionLog();
+        $this->assertEquals(1, $this->countMethodInExecutionLog($logArray, 'posixSetsid'), 'Master process should be set as session leader');
+    }
+
+    public function testPosixCapabilities()
+    {
+        $event = new SchedulerEvent();
+        $posixProcess = new PosixProcess($event);
+        $capabilities = $posixProcess->getCapabilities();
+
+        $this->assertInstanceOf(MultiProcessingModuleCapabilities::class, $capabilities);
+        $this->assertEquals(MultiProcessingModuleCapabilities::ISOLATION_PROCESS, $capabilities->getIsolationLevel());
+    }
+
+    public function testIfProcMaskIsUsedOnProcessStateChanges()
+    {
+        $em = new EventManager();
+        $pcntlMock = new PcntlMockBridge();
+
+        PosixProcess::setPcntlBridge($pcntlMock);
+        $event = new SchedulerEvent();
+        $posixProcess = new PosixProcess($event);
+        $posixProcess->attach($em);
+
+        $event->setName(SchedulerEvent::EVENT_SCHEDULER_START);
+        $em->triggerEvent($event);
+
+        $event->setName(SchedulerEvent::EVENT_PROCESS_WAITING);
+        $em->triggerEvent($event);
+
+        $logArray = $pcntlMock->getExecutionLog();
+        $this->assertEquals(1, $this->countMethodInExecutionLog($logArray, 'pcntlSigprocmask'), 'Signal masking should be disabled when process is waiting');
+        $this->assertEquals(1, $this->countMethodInExecutionLog($logArray, 'pcntlSignalDispatch'), 'Signal dispatching should be performed when process is waiting');
+        $pcntlMock->setExecutionLog([]);
+
+        $event->setName(SchedulerEvent::EVENT_PROCESS_RUNNING);
+        $em->triggerEvent($event);
+        $logArray = $pcntlMock->getExecutionLog();
+        $this->assertEquals(1, $this->countMethodInExecutionLog($logArray, 'pcntlSigprocmask'), 'Signal masking should be disabled when process is running');
+        $this->assertEquals(0, $this->countMethodInExecutionLog($logArray, 'pcntlSignalDispatch'), 'Signal dispatching should not be performed when process is running');
     }
 }
