@@ -42,7 +42,7 @@ final class PosixProcess implements MultiProcessingModuleInterface
     /**
      * @return PosixProcessBridgeInterface
      */
-    private function getPcntlBridge()
+    private static function getPcntlBridge()
     {
         if (!isset(static::$pcntlBridge)) {
             static::$pcntlBridge = new PcntlBridge();
